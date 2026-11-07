@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#05060f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="description" content="Juego de disparos en realidad aumentada: tu celular es el blaster.">
+  <title>Galaxy Strike AR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <!-- Capas: cámara trasera (AR) → fondo 2D → aliens en 3D (WebGL) → efectos y HUD -->
+  <video id="camara" playsinline muted autoplay></video>
+  <canvas id="fondo"></canvas>
+  <canvas id="capa3d"></canvas>
+  <canvas id="lienzo"></canvas>
+  <div id="sondaSegura" aria-hidden="true"></div>
+
+  <!-- ================= HUD (durante la partida) ================= -->
+  <div id="hud" class="oculto">
+    <div class="hud-sup">
+      <div class="hud-izq">
+        <div id="hudPuntos">0</div>
+        <div id="hudCombo"></div>
+        <div id="marcador"></div>
+        <div id="cargaAtaque">
+          <span>☄️ ATAQUE</span>
+          <div class="barra"><div id="barraCarga"></div></div>
+        </div>
+      </div>
+      <div class="hud-centro">
+        <div id="hudTiempo"></div>
+        <div id="hudOleada">OLEADA 1</div>
+      </div>
+      <div class="hud-der">
+        <div id="hudVidas"></div>
+        <button id="btnPausa" class="btn-redondo" aria-label="Pausa">❚❚</button>
+      </div>
+    </div>
+
+    <div id="avisos"></div>
+
+    <div id="capaEliminado" class="oculto">
+      <b>ELIMINADO</b>
+      <span>Mira el marcador: la partida termina cuando acabe el tiempo.</span>
+    </div>
+
+    <div id="pistaTeclas">Mouse: apuntar · Clic / Espacio: disparar · A / D: esquivar · R: centrar</div>
+
+    <div id="botonesEsquive">
+      <button id="btnIzq" class="btn-redondo grande" aria-label="Esquivar a la izquierda">◄</button>
+      <button id="btnDer" class="btn-redondo grande" aria-label="Esquivar a la derecha">►</button>
+    </div>
+    <button id="btnDisparo" aria-label="Disparar">FUEGO</button>
+  </div>
+
+  <!-- ================= Pantallas ================= -->
+  <section class="pantalla activa" id="pInicio">
+    <div class="panel panel-inicio">
+      <div class="logo">
+        <span class="logo-galaxy">GALAXY</span>
+        <span class="logo-strike">STRIKE</span>
+        <span class="logo-ar">AR</span>
+      </div>
+      <p class="lema">Aliens en 3D: dispárales en tu cuarto o esquívalos a toda velocidad.</p>
+      <div class="selector-modo" role="group" aria-label="Tipo de juego">
+        <button class="opcion-modo" id="modoAR">🎯 Disparos AR</button>
+        <button class="opcion-modo" id="modoEsquiva">👾 Esquiva marcianos</button>
+      </div>
+      <p class="pista-modo" id="txtModoPista"></p>
+      <label class="campo">
+        <span>Nombre de piloto</span>
+        <input id="inpNombre" maxlength="14" autocomplete="off" spellcheck="false">
+      </label>
+      <button class="btn btn-primario" id="btnSolo">▶ Jugar solo</button>
+      <button class="btn btn-secundario" id="btnOnline">🌐 Multijugador en línea</button>
+      <button class="btn btn-texto" id="btnComo">¿Cómo se juega?</button>
+      <div class="pie">
+        <span>Récord: <b id="txtRecord">0</b></span>
+        <span class="firma">por SantiSarm</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pComo">
+    <div class="panel">
+      <h2>Cómo se juega</h2>
+      <h3 class="subtitulo">🎯 Disparos AR <small>(celular)</small></h3>
+      <div class="pasos">
+        <div class="paso"><span class="ico">📱</span><b>Apunta</b><small>Mueve el celular como si fuera tu arma. La mira está en el centro.</small></div>
+        <div class="paso"><span class="ico">💥</span><b>Dispara</b><small>Toca la pantalla (o mantén FUEGO) cuando la mira se ponga roja.</small></div>
+        <div class="paso"><span class="ico">↔️</span><b>Esquiva</b><small>Inclina el celular a un lado, como un timón, para esquivar meteoros y disparos.</small></div>
+        <div class="paso"><span class="ico">🧭</span><b>Busca</b><small>Las flechas del borde y el radar te dicen dónde hay aliens. Gira con ellos.</small></div>
+      </div>
+      <div class="enemigos">
+        <div><i class="punto verde"></i>Ovni · 100 pts · te dispara orbes</div>
+        <div><i class="punto amarillo"></i>Dron · 150 pts · viene hacia ti</div>
+        <div><i class="punto morado"></i>Nave nodriza · 1500 pts · cada 5 oleadas</div>
+        <div><i class="punto rojo"></i>Meteoro · indestructible · ¡esquívalo!</div>
+      </div>
+      <p class="nota">Combos de kills seguidos multiplican tus puntos hasta x4. En línea, cada 8 kills le mandas meteoros a tus rivales.</p>
+      <h3 class="subtitulo">👾 Esquiva marcianos <small>(PC)</small></h3>
+      <div class="enemigos">
+        <div>🖱️ Mueve tu nave con el <b>mouse</b> (o <b>WASD / flechas</b>; en celular, arrastra el dedo).</div>
+        <div>💨 <b>Clic o Espacio</b>: impulso rápido; mientras dura, los marcianos no te hacen daño.</div>
+        <div>⭕ El <b>círculo rojo</b> te avisa que ese marciano te va a pegar. ¡Muévete!</div>
+        <div>🧱 Los <b>muros</b> tienen un hueco: pasa por ahí.</div>
+        <div>💎 Pasar raspando da <b>«¡por poco!»</b> y los cristales dan puntos. 12 cristales = +1 ❤.</div>
+      </div>
+      <button class="btn btn-primario" id="btnComoListo">¡Entendido!</button>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pPermisos">
+    <div class="panel">
+      <h2>Activa la realidad aumentada</h2>
+      <div class="permiso"><span class="ico">📷</span><div><b>Cámara trasera</b><small>Para ver a los aliens en tu entorno real.</small></div></div>
+      <div class="permiso"><span class="ico">🧭</span><div><b>Sensores de movimiento</b><small>Para apuntar moviendo el celular.</small></div></div>
+      <p class="nota aviso-prueba">Estás en la vista de prueba de Claude: aquí el navegador bloquea la cámara y el giroscopio, así que jugarás con el mouse (o arrastrando el dedo). La realidad aumentada funciona en la versión publicada, abierta en el celular.</p>
+      <button class="btn btn-primario" id="btnPermitir">Activar y continuar</button>
+      <button class="btn btn-texto" id="btnVolverPerm">Volver</button>
+      <p class="nota">Sostén el celular con las dos manos y deja espacio a tu alrededor.</p>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pOnline">
+    <div class="panel">
+      <h2>Multijugador en línea</h2>
+      <p class="texto">Todos enfrentan la misma invasión, cada uno en su espacio. Gana quien haga más puntos en 3 minutos. Hasta 4 pilotos.</p>
+      <button class="btn btn-primario" id="btnCrear">Crear sala</button>
+      <div class="separador"><span>o únete con un código</span></div>
+      <div class="fila-codigo">
+        <input id="inpCodigo" maxlength="4" placeholder="ABCD" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <button class="btn btn-secundario" id="btnUnirse">Unirse</button>
+      </div>
+      <p class="nota" id="txtOnlineEstado"></p>
+      <p class="nota error" id="txtOnlineError"></p>
+      <button class="btn btn-texto" id="btnVolverOnline">Volver</button>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pSala">
+    <div class="panel">
+      <div class="etiqueta">Código de la sala</div>
+      <div class="codigo-grande" id="txtCodigo">----</div>
+      <div class="fila-botones">
+        <button class="btn btn-mini" id="btnCopiar">Copiar código</button>
+        <button class="btn btn-mini" id="btnCompartir">Compartir</button>
+      </div>
+      <div class="modo-sala" id="txtModoSala"></div>
+      <ul class="lista-jugadores" id="listaJugadores"></ul>
+      <button class="btn btn-secundario oculto" id="btnSensoresSala">📷 Activar cámara y sensores</button>
+      <p class="nota" id="txtSalaEstado"></p>
+      <button class="btn btn-primario" id="btnEmpezar">¡Empezar partida!</button>
+      <button class="btn btn-texto" id="btnSalirSala">Salir de la sala</button>
+    </div>
+  </section>
+
+  <section class="pantalla pantalla-cuenta" id="pCuenta">
+    <div class="cuenta">
+      <div id="txtCuenta" class="cuenta-num">3</div>
+      <p id="txtCuentaPista">Apunta el celular al frente</p>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pPausa">
+    <div class="panel">
+      <h2>Pausa</h2>
+      <p class="nota" id="txtPausaNota"></p>
+      <button class="btn btn-primario" id="btnContinuar">Continuar</button>
+      <button class="btn btn-secundario" id="btnRecentrar">🎯 Centrar la mira aquí</button>
+      <button class="btn btn-secundario" id="btnSonido">🔊 Sonido: sí</button>
+      <button class="btn btn-texto" id="btnSalirJuego">Salir al menú</button>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pFin">
+    <div class="panel">
+      <h2 id="txtFinTitulo">FIN DEL JUEGO</h2>
+      <div id="finContenido"></div>
+      <button class="btn btn-primario" id="btnOtraVez">Jugar otra vez</button>
+      <button class="btn btn-texto" id="btnMenu">Menú principal</button>
+    </div>
+  </section>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- PEERJS: multijugador en línea (WebRTC entre celulares) -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- /PEERJS -->
+  <script src="js/utilidades.js"></script>
+  <script src="js/sonido.js"></script>
+  <script src="js/sensores.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/motor3d.js"></script>
+  <script src="js/modelos.js"></script>
+  <script src="js/juego.js"></script>
+  <script src="js/esquiva.js"></script>
+  <script src="js/red.js"></script>
+  <script src="js/interfaz.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
