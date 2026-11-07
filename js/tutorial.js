@@ -7,7 +7,7 @@
 'use strict';
 
 (function (GS) {
-  const J = GS.Juego;
+  const J = GS.Juego, U = GS.U;
   const T = (GS.Tutorial = { activo: false, tipo: null, alTerminar: null });
   let pasos = [], i = 0, contador = 0, timers = [];
 
@@ -38,8 +38,11 @@
 
   function pasosEsquiva() {
     const E = GS.Esquiva;
-    const mover = esPC() ? 'mouse o WASD' : 'arrastra el dedo';
+    const cam = E.camara;
+    const mover = cam ? 'muévete de lado o agáchate' : esPC() ? 'mouse o WASD' : 'arrastra el dedo';
     const anillo = () => { const L = E.tut.limites(); E.tut.anillo((Math.random() < 0.5 ? -1 : 1) * L.x * 0.5, (Math.random() - 0.3) * L.y); };
+    const blanco = () => { const n = E.tut.nave(), L = E.tut.limites(); E.tut.dron(U.clamp(-n.x * 0.6, -L.x, L.x), U.clamp(n.y * 0.4 + 0.8, -L.y, L.y), -75); };
+    const impulso = cam ? 'abre la mano ✋' : esPC() ? 'clic o Espacio' : 'botón IMPULSO';
     return [
       { texto: '🕹️ Mueve la nave (' + mover + ') y pasa por dentro del anillo dorado.',
         entrar: anillo, tutAnillo: siguiente, tutFallo: () => despues(500, anillo) },
@@ -49,7 +52,10 @@
           for (let k = 0; k < 4; k++) despues(k * 1000, () => { const n = E.tut.nave(); E.tut.dron(n.x + (Math.random() - 0.5), n.y + (Math.random() - 0.5) * 0.6, -95); });
         },
         tutPaso: () => { contador++; if (contador >= 4) siguiente(); } },
-      { texto: '💨 Usa el impulso (' + (esPC() ? 'clic o Espacio' : 'botón IMPULSO') + '): mientras dura, nada te hace daño.', tutImpulso: siguiente },
+      // Solo con cámara: dispararle a un marciano con la mano
+      ...(cam ? [{ texto: '🔫 Haz una pistola con la mano (índice estirado, pulgar arriba), apunta al marciano y baja el pulgar para disparar.',
+        entrar: blanco, tutDisparo: siguiente, tutPaso: () => despues(300, blanco) }] : []),
+      { texto: '💨 Usa el impulso (' + impulso + '): mientras dura, nada te hace daño.', tutImpulso: siguiente },
       { texto: '⚡ Atraviesa la cápsula para ganar un poder.',
         entrar: () => { const n = E.tut.nave(); E.tut.capsula('iman', n.x * 0.5, n.y * 0.5); }, tutPoder: siguiente,
         tutFallo: () => despues(400, () => { const n = E.tut.nave(); E.tut.capsula('iman', n.x * 0.5, n.y * 0.5); }) },
@@ -105,7 +111,7 @@
   };
 
   // Eventos que mandan los modos de juego
-  ['tutKill', 'tutEsquivo', 'tutGolpe', 'tutPoder', 'tutAnillo', 'tutFallo', 'tutPaso', 'tutImpulso', 'tutCristal'].forEach((ev) => {
+  ['tutDisparo', 'tutKill', 'tutEsquivo', 'tutGolpe', 'tutPoder', 'tutAnillo', 'tutFallo', 'tutPaso', 'tutImpulso', 'tutCristal'].forEach((ev) => {
     J.on(ev, (...args) => { if (T.activo && pasos[i] && pasos[i][ev]) pasos[i][ev](...args); });
   });
 })(window.GS);

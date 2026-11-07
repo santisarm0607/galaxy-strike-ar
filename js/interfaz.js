@@ -30,11 +30,14 @@
   const NOMBRE_TIPO = { ar: '🎯 Disparos AR', esquiva: '👾 Esquiva marcianos' };
   const esPC = () => !(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   let tipoElegido = 'ar';
+  /* Control de Esquiva marcianos: 'normal' (mouse, teclado o dedo) o 'camara' (cuerpo y manos) */
+  let control = 'normal';
 
   /* ---------------- Utilidades de interfaz ---------------- */
   function mostrar(id) {
     document.querySelectorAll('.pantalla').forEach((p) => p.classList.toggle('activa', p.id === id));
     pantalla = id;
+    document.body.dataset.pantalla = id || '';
     // El botón ⛶ de la esquina solo se ve en los menús
     document.body.classList.toggle('sin-boton-pantalla', !id || id === 'pCuenta');
   }
@@ -207,6 +210,7 @@
     mostrar('pCuenta');
     const el = $('txtCuenta');
     $('txtCuentaPista').textContent = pista || (J.tipoJuego === 'esquiva' ? '¡Prepárate para esquivar!' : 'Apunta el celular al frente');
+    if (GS.Esquiva.camara) $('txtCuentaPista').textContent = (pista ? pista + ' · ' : '') + '🧍 Quédate en el centro';
     let n = 3;
     const pintar = (txt) => {
       el.textContent = txt;
@@ -219,7 +223,7 @@
     ivCuenta = setInterval(() => {
       n--;
       if (n > 0) { pintar(n); A.cuenta(false); }
-      else if (n === 0) { pintar('¡YA!'); A.cuenta(true); S.recentrar(); }
+      else if (n === 0) { pintar('¡YA!'); A.cuenta(true); S.recentrar(); if (GS.Esquiva.camara) GS.Cuerpo.calibrar(); }
       else {
         clearInterval(ivCuenta);
         mostrar(null);
@@ -235,9 +239,14 @@
     document.body.dataset.partida = modo;
     document.body.dataset.juego = J.tipoJuego;
     $('btnDisparo').textContent = J.tipoJuego === 'esquiva' ? 'IMPULSO' : 'FUEGO';
-    $('pistaTeclas').textContent = J.tipoJuego === 'esquiva'
-      ? 'Mouse o WASD / flechas: mover la nave · Clic o Espacio: impulso · Esc: pausa'
-      : 'Mouse: apuntar · Clic / Espacio: disparar · A / D: esquivar · R: centrar';
+    const conCam = camaraEnUso();
+    GS.Esquiva.usarCamara(conCam);
+    document.body.classList.toggle('con-cuerpo', conCam);
+    $('pistaTeclas').textContent = conCam
+      ? '🧍 Muévete: la nave te sigue · 🔫 Mano en pistola + baja el pulgar: disparar · ✋ Mano abierta: impulso · Esc: pausa'
+      : J.tipoJuego === 'esquiva'
+        ? 'Mouse o WASD / flechas: mover la nave · Clic o Espacio: impulso · Esc: pausa'
+        : 'Mouse: apuntar · Clic / Espacio: disparar · A / D: esquivar · R: centrar';
     renderVidas();
     $('capaEliminado').classList.add('oculto');
     $('avisos').innerHTML = '';
@@ -825,6 +834,7 @@
     soltarWakeLock();
     $('hud').classList.add('oculto');
     document.body.dataset.partida = '';
+    document.body.classList.remove('con-cuerpo');
     mostrar('pInicio');
   }
 
@@ -854,7 +864,8 @@
     });
     window.addEventListener('pointermove', (ev) => {
       const esq = J.tipoJuego === 'esquiva';
-      if (esq && ev.pointerType === 'mouse') GS.Esquiva.apuntar(ev.clientX, ev.clientY, window.innerWidth, window.innerHeight);
+      if (esq && ev.pointerType === 'mouse' && GS.Esquiva.camara) { /* con cámara manda tu cuerpo, no el mouse */ }
+      else if (esq && ev.pointerType === 'mouse') GS.Esquiva.apuntar(ev.clientX, ev.clientY, window.innerWidth, window.innerHeight);
       else if (S.modo === 'mouse' && ev.pointerType === 'mouse') S.mouse(ev.clientX, ev.clientY, window.innerWidth, window.innerHeight);
       if (arrastre && ev.pointerId === arrastre.id) {
         if (esq) GS.Esquiva.arrastrar(ev.clientX - arrastre.x, ev.clientY - arrastre.y, window.innerWidth, window.innerHeight);
@@ -932,16 +943,26 @@
     clic('btnSolo', () => {
       guardar('gs_nombre', nombre());
       pedirPantallaCompleta();
-      if (tipoElegido === 'esquiva') abrirSectores();
+      if (tipoElegido === 'esquiva') conCamara(abrirSectores);
       else conSensores(abrirSectores);
     });
     clic('btnOnline', () => {
       guardar('gs_nombre', nombre());
-      if (tipoElegido === 'esquiva') abrirOnline();
+      if (tipoElegido === 'esquiva') conCamara(abrirOnline);
       else conSensores(abrirOnline);
     });
     clic('modoAR', () => elegirTipo('ar'));
     clic('modoEsquiva', () => elegirTipo('esquiva'));
+    clic('ctrlNormal', () => elegirControl('normal'));
+    clic('ctrlCamara', () => elegirControl('camara'));
+    clic('btnCamListo', () => {
+      const CU = GS.Cuerpo;
+      if (CU.estado === 'listo') { cerrarCamara(true); return; }
+      const fn = camDespues; // reintentar
+      cerrarCamara(false);
+      conCamara(fn);
+    });
+    clic('btnCamCancelar', () => { elegirControl('normal'); cerrarCamara(true); });
     clic('btnSensoresSala', async () => {
       const promesa = S.preparar($('camara'));
       const r = await promesa;
@@ -954,7 +975,7 @@
     clic('btnComoListo', () => mostrar('pInicio'));
     clic('btnPracticar', () => {
       const lanzar = () => { J.modo = 'solo'; J.prepararTipo(tipoElegido); prepararHUD('solo'); empezarTutorial(salirAlMenu); };
-      if (tipoElegido === 'esquiva') lanzar(); else conSensores(lanzar);
+      if (tipoElegido === 'esquiva') conCamara(lanzar); else conSensores(lanzar);
     });
     clic('btnPerfil', () => abrirPerfil('logros'));
     clic('btnAjustes', () => { volverDesdeAjustes = 'pInicio'; abrirAjustes(); });
@@ -1052,10 +1073,96 @@
     guardar('gs_tipo', tipoElegido);
     $('modoAR').classList.toggle('activo', tipoElegido === 'ar');
     $('modoEsquiva').classList.toggle('activo', tipoElegido === 'esquiva');
-    $('txtModoPista').textContent = tipoElegido === 'esquiva'
-      ? 'Ideal para PC: mueve tu nave con el mouse y esquiva a los marcianos.'
-      : 'Para celular: apunta moviéndolo y dispara a los aliens en tu cuarto.';
+    $('selectorControl').classList.toggle('oculto', tipoElegido !== 'esquiva');
+    // La cámara frontal se apaga si cambias a Disparos AR
+    if (tipoElegido !== 'esquiva' && GS.Cuerpo.estado === 'listo') GS.Cuerpo.detener();
+    pintarControl();
     mostrarRecord();
+  }
+
+  /* ---------------- Control con cámara (Esquiva marcianos) ---------------- */
+  function pintarControl() {
+    $('ctrlNormal').classList.toggle('activo', control === 'normal');
+    $('ctrlCamara').classList.toggle('activo', control === 'camara');
+    $('txtModoPista').textContent = tipoElegido === 'esquiva'
+      ? control === 'camara'
+        ? 'Con cámara: tu cuerpo mueve la nave y con la mano en pistola le disparas a los marcianos.'
+        : 'Ideal para PC: mueve tu nave con el mouse y esquiva a los marcianos.'
+      : 'Para celular: apunta moviéndolo y dispara a los aliens en tu cuarto.';
+  }
+
+  function elegirControl(c) {
+    control = c === 'camara' ? 'camara' : 'normal';
+    guardar('gs_control', control);
+    if (control === 'normal') {
+      if (GS.Cuerpo.estado === 'listo') GS.Cuerpo.detener();
+      GS.Esquiva.usarCamara(false);
+      document.body.classList.remove('con-cuerpo');
+    }
+    pintarControl();
+  }
+
+  /** ¿Esta partida se juega con la cámara? */
+  function camaraEnUso() {
+    return J.tipoJuego === 'esquiva' && control === 'camara' && GS.Cuerpo.estado === 'listo';
+  }
+
+  /** Antes de jugar Esquiva con cámara: permiso, carga del detector y comprobar que te ve. */
+  let camDespues = null, ivCam = null;
+  function conCamara(fn) {
+    const CU = GS.Cuerpo;
+    if (tipoElegido !== 'esquiva' || control !== 'camara' || CU.estado === 'listo') { fn(); return; }
+    camDespues = fn;
+    $('huecoCam').appendChild($('camCuerpo'));
+    document.body.classList.add('cam-grande');
+    $('btnCamListo').disabled = true;
+    $('btnCamListo').textContent = 'Esperando…';
+    $('txtCamEstado').textContent = '📷 Pidiendo permiso para la cámara…';
+    mostrar('pCamara');
+    CU.iniciar($('videoCuerpo')).then((ok) => {
+      if (pantalla !== 'pCamara') return;
+      if (!ok) {
+        $('txtCamEstado').textContent = '⚠️ ' + CU.error + ' Puedes reintentar o jugar con el control normal.';
+        $('btnCamListo').textContent = '🔄 Reintentar';
+        $('btnCamListo').disabled = false;
+        return;
+      }
+      CU.reanudarVideo();
+      clearInterval(ivCam);
+      ivCam = setInterval(() => {
+        if (pantalla !== 'pCamara') { clearInterval(ivCam); return; }
+        const teVe = CU.persona;
+        const pistola = CU.manos.some((m) => m.pistola);
+        $('txtCamEstado').textContent = !teVe
+          ? '🧍 Párate frente a la cámara, que se vean tus hombros…'
+          : pistola ? '🔫 ¡Esa es la pistola! Baja el pulgar para disparar.' : '✅ ¡Te veo! Prueba a hacer una pistola con la mano.';
+        $('btnCamListo').disabled = !teVe;
+        $('btnCamListo').textContent = teVe ? '¡Listo, a jugar!' : 'Esperando…';
+      }, 250);
+    });
+  }
+
+  function cerrarCamara(seguir) {
+    clearInterval(ivCam);
+    $('lienzo').after($('camCuerpo')); // la mini ventana vuelve a su esquina
+    document.body.classList.remove('cam-grande');
+    GS.Cuerpo.reanudarVideo();
+    const fn = camDespues;
+    camDespues = null;
+    if (seguir && fn) fn();
+  }
+
+  function prepararCuerpo() {
+    const CU = GS.Cuerpo, E = GS.Esquiva;
+    // Solo detecta cuando hace falta (ahorra batería)
+    CU.necesario = () => pantalla === 'pCamara' || (E.camara && (J.estado === 'jugando' || J.estado === 'cuenta'));
+    CU.alImpulso = () => { if (E.camara && J.estado === 'jugando') E.impulso(); };
+    CU.alProgreso = (txt) => { if (pantalla === 'pCamara') $('txtCamEstado').textContent = txt; };
+    CU.alLento = () => {
+      toast('🐢 Este equipo va lento con la cámara: vuelvo al control normal.', 4500);
+      elegirControl('normal');
+    };
+    control = leer('gs_control', 'normal') === 'camara' ? 'camara' : 'normal';
   }
 
   /* ---------------- Sectores (campaña) ---------------- */
@@ -1294,6 +1401,7 @@
     }
     window.addEventListener('orientationchange', () => setTimeout(revisarOrientacion, 300));
     $('inpNombre').value = limpiarNombre(leer('gs_nombre', 'Piloto' + ((Math.random() * 90 + 10) | 0)));
+    prepararCuerpo();
     elegirTipo(leer('gs_tipo', esPC() ? 'esquiva' : 'ar'));
     S.modo = esPC() ? 'mouse' : 'tactil';
     document.body.dataset.modo = S.modo;

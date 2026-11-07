@@ -4,6 +4,8 @@
    Pilotas una nave 3D vista desde atrás; los marcianos vienen
    hacia ti y tienes que esquivarlos. Mouse, WASD/flechas o
    arrastrar el dedo para moverte; Espacio/clic para el impulso.
+   Con el control de CÁMARA (js/cuerpo.js) tu cuerpo mueve la nave,
+   la mano en forma de pistola dispara y la mano abierta da impulso.
 
    Campaña: cada sector dura ~1 minuto y termina con su nave
    nodriza (sobrevive a sus fases para completarlo).
@@ -30,9 +32,14 @@
     impulsoEnfriamiento: 2.2,
     impulsoDuracion: 0.32,
     cristalesPorVida: 12,
-    distanciaAparicion: 130
+    distanciaAparicion: 130,
+    // Control con cámara (js/cuerpo.js): disparos con la mano
+    cadenciaCamara: 0.3,   // segundos entre disparos de cada mano
+    ayudaMira: 26,         // píxeles de ayuda al apuntar
+    vidaJefeBase: 20,      // disparos que aguanta la nave nodriza…
+    vidaJefePorFase: 12    // …más estos por cada fase
   };
-  const PUNTOS = { porPoco: 25, cristal: 50, anillo: 100, jefe: 500 };
+  const PUNTOS = { porPoco: 25, cristal: 50, anillo: 100, jefe: 500, marciano: 50, jefeDerribado: 1000 };
 
   const E = (GS.Esquiva = { CFG });
 
@@ -51,6 +58,8 @@
   let tSpawn = 0, tCristal = 0, tFormacion = 0, tLaser = 0, tAnillo = 0, tCapsula = 0, acumPuntos = 0, tAvisoPuntos = 0;
   let impulsoEnfr = 0, impulsoT = 0, finEn = -1, victoriaEn = -1, sueloOffset = 0;
   let porPoco = 0, cristales = 0, anillos = 0, jefeSuperado = false;
+  let derribos = 0, rayosJ = [], enfrMano = {}; // control con cámara
+  E.camara = false;
   let sector = null, tema = null;
   let camQ = Q.identidad(), camInv = Q.identidad(), camPos = [0, 1.5, 8.5];
   let C = null; // capas de dibujo que presta juego.js
@@ -79,7 +88,7 @@
   /** Deja la nave lista (se ve durante la cuenta regresiva). */
   E.preparar = function () {
     Object.assign(nave, { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, t: 0 });
-    obs = []; items = []; parts = []; textos = []; ataques = [];
+    obs = []; items = []; parts = []; textos = []; ataques = []; rayosJ = []; enfrMano = {};
     jefe = null; impulsoT = 0; impulsoEnfr = 0;
     if (!rayas.length) crearRayas();
   };
@@ -98,14 +107,14 @@
     vel = (sector ? sector.esquiva.vel : CFG.velBase) * J.dif.velocidad;
     tSpawn = 1.2; tCristal = 2; tFormacion = 10; tLaser = 6; tAnillo = 4; tCapsula = 12;
     acumPuntos = 0; tAvisoPuntos = 0; finEn = -1; victoriaEn = -1;
-    porPoco = 0; cristales = 0; anillos = 0; jefeSuperado = false;
+    porPoco = 0; cristales = 0; anillos = 0; jefeSuperado = false; derribos = 0;
     if (opc.tutorial || J.tutorial) { tSpawn = Infinity; tCristal = Infinity; tFormacion = Infinity; tLaser = Infinity; tAnillo = Infinity; tCapsula = Infinity; }
     J.oleada = 1;
     J.tema = tema;
     J.emitir('oleada', 1, false, sector ? sector.nombre : 'Nivel 1');
   };
 
-  E.estadisticas = () => ({ nivel, tiempo: tiempoVivo, porPoco, cristales, anillos });
+  E.estadisticas = () => ({ nivel, tiempo: tiempoVivo, porPoco, cristales, anillos, derribos });
 
   /** Texto para el centro del HUD. */
   E.progreso = function () {
@@ -138,6 +147,74 @@
     nave.ty = U.clamp(nave.ty - dy * ((2 * LY) / h) * 1.8 * k, -LY, LY);
   };
   E.tecla = function (nombre, on) { teclas[nombre] = on; };
+
+  /** Prende o apaga el control con cámara (cuerpo mueve la nave, manos disparan). */
+  E.usarCamara = function (on) { E.camara = !!on; enfrMano = {}; };
+
+  /** Disparo con la mano hacia un punto de la pantalla (sx, sy en píxeles). */
+  E.dispararA = function (sx, sy) {
+    if (!C || J.estado !== 'jugando' || !J.vivo) return null;
+    // Rayo desde la cámara que pasa por ese punto de la pantalla
+    const dir = Q.rotar(camQ, V.norm([(sx - C.W / 2) / FE, -(sy - C.H / 2) / FE, -1]));
+    let mejor = null, mejorZ = -Infinity;
+    for (const e of obs) {
+      if (e.tipo !== 'dron' && e.tipo !== 'teleport' && e.tipo !== 'ovni') continue;
+      if (e.z < -115 || e.z > 1) continue;
+      const p = proyectar([e.x, e.y, e.z]);
+      if (p.detras) continue;
+      const r = Math.max(e.radio * p.k * 1.25, CFG.ayudaMira);
+      if (Math.hypot(p.x - sx, p.y - sy) < r && e.z > mejorZ) { mejor = e; mejorZ = e.z; }
+    }
+    let golpeJefe = false;
+    if (jefe && jefe.t < jefe.dur && jefe.entrada > 0.6 && (!mejor || jefe.z > mejorZ)) {
+      const p = proyectar([jefe.x, jefe.y, jefe.z]);
+      if (!p.detras && Math.hypot(p.x - sx, p.y - sy) < Math.max(4.2 * p.k * 0.75, CFG.ayudaMira)) golpeJefe = true;
+    }
+    const origen = [nave.x, nave.y + 0.1, -0.8];
+    let fin;
+    if (golpeJefe) fin = [jefe.x, jefe.y, jefe.z];
+    else if (mejor) fin = [mejor.x, mejor.y, mejor.z];
+    else { const t = (-90 - camPos[2]) / Math.min(-0.05, dir[2]); fin = V.add(camPos, V.esc(dir, t)); }
+    rayosJ.push({ a: origen, b: fin, t: 0, vida: 0.12, c: GS.Progreso.nave().laser || '56,248,255' });
+    GS.Sonido.disparo();
+
+    if (golpeJefe) {
+      jefe.vida--;
+      jefe.golpe = 0.12;
+      explosion([jefe.x + U.rand(-1, 1), jefe.y - 0.5, jefe.z + 2], 'orbe', 8);
+      GS.Sonido.impacto();
+      if (jefe.vida <= 0) jefeVencido(true);
+      return 'jefe';
+    }
+    if (!mejor) return null;
+    if (mejor.formacion) {
+      // Los muros no se rompen: hay que pasar por el hueco
+      explosion([mejor.x, mejor.y, mejor.z], 'nave', 6);
+      GS.Sonido.rebote();
+      return 'muro';
+    }
+    mejor.muerto = true;
+    derribos++;
+    explosion([mejor.x, mejor.y, mejor.z], mejor.tipo, 22);
+    GS.Sonido.explosion(false);
+    sumarCombo();
+    const pts = J.sumarPuntos(PUNTOS.marciano, true);
+    textos.push({ txt: '+' + pts, c: '#ffd23f', t: 0, vida: 0.8, x: mejor.x, y: mejor.y + 0.8, z: mejor.z });
+    if (J.tutorial || mejor.tutorial) J.emitir('tutDisparo');
+    return 'marciano';
+  };
+
+  /** Cada cuadro: las manos en forma de pistola con el gatillo abajo disparan. */
+  function disparosCamara(dt) {
+    for (const id in enfrMano) enfrMano[id] -= dt;
+    if (!E.camara || !GS.Cuerpo || !J.vivo) return;
+    for (const m of GS.Cuerpo.manos) {
+      if (!m.gatillo) continue;
+      if ((enfrMano[m.id] || 0) > 0) continue;
+      enfrMano[m.id] = CFG.cadenciaCamara;
+      E.dispararA(m.x * C.W, m.y * C.H);
+    }
+  }
   E.impulso = function () {
     if (J.estado !== 'jugando' || !J.vivo || impulsoEnfr > 0) return;
     let dx = nave.tx - nave.x, dy = nave.ty - nave.y;
@@ -265,7 +342,8 @@
   }
 
   function llegaJefe(fases, dur) {
-    jefe = { x: 0, y: 5.2, z: -120, t: 0, dur, fases, fase: 1, tDisparo: 2.5, tLaser: 2, entrada: 0,
+    jefe = { x: 0, y: 5.2, z: -120, t: 0, dur, fases, fase: 1, tDisparo: 2.5, tLaser: 2, entrada: 0, golpe: 0,
+      vida: CFG.vidaJefeBase + CFG.vidaJefePorFase * fases, // solo importa con el control de cámara
       colores: sector ? JEFE_COLORES[sector.id] : JEFE_COLORES[1 + (Math.floor((nivel - 1) / 2) % 4)] };
     GS.Sonido.alerta();
     GS.Musica.tocar('jefe');
@@ -383,6 +461,7 @@
     }
 
     actualizarJefe(dt, dtM);
+    disparosCamara(dt);
 
     // Marcianos y obstáculos
     const rN = CFG.radioNave;
@@ -492,21 +571,44 @@
     } else {
       jefe.y += dt * 6;
       jefe.z -= dt * 30;
-      if (jefe.z < -160) {
-        jefe = null;
-        if (J.vivo) {
-          jefeSuperado = true;
-          GS.Progreso.evento('jefeEsquiva');
-          const pts = J.sumarPuntos(PUNTOS.jefe * (sector ? sector.id : 1), false);
-          J.emitir('aviso', '¡SOBREVIVISTE A LA NAVE NODRIZA! +' + pts, 'exito');
-          GS.Musica.tocar('juego');
-          if (sector) victoriaEn = 1.8;
-        }
-      }
+      if (jefe.z < -160) jefeVencido(false);
     }
   }
 
+  /** La nave nodriza se fue (sobreviviste) o la derribaste con la cámara (bonus). */
+  function jefeVencido(derribado) {
+    const j = jefe;
+    jefe = null;
+    if (!J.vivo) return;
+    jefeSuperado = true;
+    GS.Progreso.evento('jefeEsquiva');
+    const mult = sector ? sector.id : 1;
+    let pts = J.sumarPuntos(PUNTOS.jefe * mult, false);
+    if (derribado) {
+      pts += J.sumarPuntos(PUNTOS.jefeDerribado * mult, false);
+      explosion([j.x, j.y, j.z], 'nave', 90);
+      explosion([j.x, j.y, j.z], 'orbe', 40);
+      J.sacudida = 1.2;
+      J.flash = 0.4;
+      J.flashColor = '255,210,63';
+      GS.Sonido.explosion(true);
+      // Sus disparos y láseres desaparecen con ella
+      obs.forEach((e) => { if (e.tipo === 'orbe' || (e.tipo === 'laser' && e.extra === 6)) e.muerto = true; });
+      J.emitir('aviso', '💥 ¡DERRIBASTE LA NAVE NODRIZA! +' + pts, 'exito');
+    } else {
+      J.emitir('aviso', '¡SOBREVIVISTE A LA NAVE NODRIZA! +' + pts, 'exito');
+    }
+    GS.Musica.tocar('juego');
+    if (sector) victoriaEn = 1.8;
+  }
+
   function moverNave(dt) {
+    // Control con cámara: la nave va a donde está tu cuerpo
+    if (E.camara && GS.Cuerpo && GS.Cuerpo.persona && J.estado !== 'pausa') {
+      const k = sens();
+      nave.tx = U.clamp(GS.Cuerpo.x * LX * k, -LX, LX);
+      nave.ty = U.clamp(GS.Cuerpo.y * LY * k, -LY, LY);
+    }
     const kx = (teclas.der ? 1 : 0) - (teclas.izq ? 1 : 0);
     const ky = (teclas.arriba ? 1 : 0) - (teclas.abajo ? 1 : 0);
     if (kx || ky) {
@@ -649,6 +751,9 @@
     parts = parts.filter((pa) => pa.t < pa.vida);
     for (const tx of textos) { tx.t += dt; tx.y += dt * 1.2; }
     textos = textos.filter((tx) => tx.t < tx.vida);
+    for (const r of rayosJ) r.t += dt;
+    rayosJ = rayosJ.filter((r) => r.t < r.vida);
+    if (jefe && jefe.golpe > 0) jefe.golpe -= dt;
   }
 
   /* ---------------- Dibujo ---------------- */
@@ -692,6 +797,7 @@
       M3.comenzar(camInv, camPos, sx, sy, FE);
       if (jefe) {
         const col = Object.assign({}, jefe.colores || {}, COLORES_3D.fase[jefe.fase] || {});
+        if (jefe.golpe > 0) { col.aro = [1, 1, 1]; col.nucleo = [1, 1, 1]; } // destello al recibir un disparo
         M3.dibujarModelo(M.jefe, [jefe.x, jefe.y, jefe.z], Q.eje(1, 0, 0, 0.35), 4.2, { t: jefe.t, colores: col });
       }
       for (const e of obs) {
@@ -874,6 +980,19 @@
       g.drawImage(SP.brilloVerde, p.x - w / 2, p.y - w / 2, w, w);
       g.globalAlpha = 1;
     }
+    // Láseres de tus disparos con la mano
+    g.lineCap = 'round';
+    for (const r of rayosJ) {
+      const a = proyectar(r.a), b = proyectar(r.b);
+      if (a.detras || b.detras) continue;
+      const al = 1 - r.t / r.vida;
+      g.strokeStyle = 'rgba(' + r.c + ',' + (0.85 * al).toFixed(2) + ')';
+      g.lineWidth = 7 * al + 2;
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,' + (0.9 * al).toFixed(2) + ')';
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+    }
     // Estela de la nave durante el impulso
     if (impulsoT > 0 && naveVisible()) {
       const a = proyectar([nave.x, nave.y, 0]), b = proyectar([nave.x - nave.vx * 0.06, nave.y - nave.vy * 0.06, 2]);
@@ -917,7 +1036,7 @@
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     for (const tx of textos) {
-      const p = proyectar([tx.x, tx.y, 0]);
+      const p = proyectar([tx.x, tx.y, tx.z || 0]);
       if (p.detras) continue;
       g.globalAlpha = 1 - tx.t / tx.vida;
       g.font = '800 20px Orbitron, sans-serif';
@@ -981,6 +1100,43 @@
     }
   }
 
+  /** Control con cámara: una mira por cada mano y un aviso si no te ve. */
+  function dibujarMiras(g, W, H) {
+    const CU = GS.Cuerpo;
+    if (!CU) return;
+    for (const m of CU.manos) {
+      const x = m.x * W, y = m.y * H;
+      const col = m.gatillo ? '#ff3df2' : m.pistola ? '#7cff4f' : 'rgba(255,255,255,0.45)';
+      const r = m.pistola ? 16 : 11;
+      g.strokeStyle = col;
+      g.lineWidth = 2.5;
+      g.shadowColor = col;
+      g.shadowBlur = m.pistola ? 10 : 0;
+      g.beginPath();
+      g.arc(x, y, r, 0, TAU);
+      if (m.pistola) {
+        g.moveTo(x - r - 8, y); g.lineTo(x - r + 5, y);
+        g.moveTo(x + r - 5, y); g.lineTo(x + r + 8, y);
+        g.moveTo(x, y - r - 8); g.lineTo(x, y - r + 5);
+        g.moveTo(x, y + r - 5); g.lineTo(x, y + r + 8);
+      }
+      g.stroke();
+      g.shadowBlur = 0;
+      if (m.abierta) {
+        g.font = '20px sans-serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText('✋', x, y);
+      }
+    }
+    if (!CU.persona && J.estado === 'jugando') {
+      g.font = '800 15px Orbitron, sans-serif';
+      g.textAlign = 'center';
+      g.fillStyle = 'rgba(255,208,216,' + (0.6 + 0.4 * Math.sin(nave.t * 6)).toFixed(2) + ')';
+      g.fillText('🧍 NO TE VEO: PÁRATE FRENTE A LA CÁMARA', W / 2, H * 0.62);
+    }
+  }
+
   function dibujarHUD(g, W, H) {
     const seguro = C.seguro;
     // Medidor del impulso
@@ -1007,7 +1163,16 @@
       g.fillStyle = 'rgba(255,208,216,' + (0.6 + 0.4 * Math.sin(jefe.t * 8)).toFixed(2) + ')';
       const fases = jefe.fases > 1 ? ' · FASE ' + jefe.fase + '/' + jefe.fases : '';
       g.fillText('⚠ NAVE NODRIZA' + fases + ' · ' + Math.ceil(jefe.dur - jefe.t) + 's', W / 2, 100 + seguro.t);
+      if (E.camara) {
+        // Vida de la nave nodriza (solo con cámara, porque solo así se le puede disparar)
+        const max = CFG.vidaJefeBase + CFG.vidaJefePorFase * jefe.fases, bw = 180;
+        g.fillStyle = 'rgba(5,10,30,0.6)';
+        g.fillRect(W / 2 - bw / 2, 110 + seguro.t, bw, 6);
+        g.fillStyle = '#ff3df2';
+        g.fillRect(W / 2 - bw / 2, 110 + seguro.t, bw * U.clamp(jefe.vida / max, 0, 1), 6);
+      }
     }
+    if (E.camara) dibujarMiras(g, W, H);
     g.restore();
     J.dibujarAuras(g, W, H);
   }

@@ -72,6 +72,26 @@ Dispárale a las **cápsulas** blancas para ganar un poder. Los combos multiplic
 - Pasa por dentro de los **anillos dorados** (+100), pasa raspando para un **«¡por poco!»** (+25) y junta **cristales** (+50; cada 12 = +1 ❤).
 - Atraviesa las **cápsulas** para ganar poderes (el 🧲 Imán atrae los cristales).
 
+### 🧍 Control con cámara (cuerpo y manos)
+
+En el menú, con *Esquiva marcianos* elegido, toca **Control: 🧍 Cámara**. Funciona en PC (webcam) y en celular (cámara frontal).
+
+| Acción | Cómo |
+|---|---|
+| Mover la nave | Muévete de lado, agáchate o estírate: la nave te sigue |
+| Apuntar | Mano en forma de **pistola** (índice estirado, pulgar arriba): la mira sigue tu dedo |
+| Disparar | **Baja el pulgar**, como un gatillo (si lo dejas abajo, dispara seguido) |
+| Impulso | **Abre la mano** ✋ un momento |
+
+- Solo con cámara puedes **dispararle a los marcianos** (+50 con combo). Los **muros** y los **láseres** no se rompen: igual hay que pasar por el hueco.
+- A la **nave nodriza** también le puedes disparar: si la derribas antes de que se vaya ganas **+1000** extra (por sector).
+- Sirve con cualquiera de las dos manos, o con las dos a la vez (una mira por mano).
+- Antes de jugar se abre una pantalla que pide permiso para la cámara y revisa que te vea. Al decir **¡YA!** en la cuenta regresiva, tu posición queda como el centro.
+- En una esquina ves una mini ventana (como espejo) con tus puntos: si dice **«No te veo»**, vuelve frente a la cámara.
+- Consejos: aléjate 1–2 metros, con luz de frente y que se vean tus hombros. En el celular, apóyalo en algo.
+- Usa **MediaPipe** (de Google, gratis). La librería y los modelos (unos 15 MB) se descargan de internet la primera vez que eliges la cámara. Nada de tu cámara se envía a ningún lado: todo se procesa en tu equipo.
+- Si tu equipo va muy lento con la cámara, el juego te avisa y vuelve solo al control normal.
+
 ---
 
 ## 📁 Estructura
@@ -96,6 +116,7 @@ galaxy-strike-ar/
     ├── progreso.js      → sectores ganados, estrellas, logros, naves y récords
     ├── poderes.js       → los poderes y sus fichas en pantalla
     ├── juego.js         → modo Disparos AR
+    ├── cuerpo.js        → control con cámara: detecta tu cuerpo y tus manos (MediaPipe)
     ├── esquiva.js       → modo Esquiva marcianos
     ├── tutorial.js      → tutorial interactivo
     ├── red.js           → multijugador en línea (PeerJS)
@@ -236,7 +257,8 @@ Listo: al terminar una partida del modo Infinito se envía el puntaje, y en **Lo
 
 - **Oleadas y sectores:** en `js/sectores.js`. Cada oleada es una lista de grupos, por ejemplo `{ tipo: 'divisor', n: 4, cada: 1.2, desde: 3, detras: true }` (4 divisores, uno cada 1,2 s, desde el segundo 3, apareciendo por tu espalda). También puedes cambiar los colores de cada sector y lo que pasa en *Esquiva* (`vel`, `laseres`, `muros`, `jefeFases`…).
 - **Disparos AR:** `CONFIG` al inicio de `js/juego.js` (vidas, cadencia, ayuda al apuntar, distancia del esquive…).
-- **Esquiva marcianos:** `CFG` al inicio de `js/esquiva.js` (vidas, velocidad, segundos por sector, cristales por vida…).
+- **Esquiva marcianos:** `CFG` al inicio de `js/esquiva.js` (vidas, velocidad, segundos por sector, cristales por vida, cadencia de los disparos con cámara, vida de la nave nodriza…).
+- **Control con cámara:** `CFG` al inicio de `js/cuerpo.js` (cuánto te mueves para llegar al borde, qué tan sensible es el gatillo del pulgar, suavizado y detecciones por segundo).
 - **Poderes:** `TIPOS` en `js/poderes.js` (duración, ícono, color y en qué modo salen).
 - **Logros y naves:** `LOGROS` y `NAVES` en `js/progreso.js`.
 - **Dificultades:** `DIFICULTAD` en `js/ajustes.js`.

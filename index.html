@@ -21,6 +21,12 @@
   <canvas id="fondo"></canvas>
   <canvas id="capa3d"></canvas>
   <canvas id="lienzo"></canvas>
+
+  <!-- Control con cámara (Esquiva marcianos): mini ventana espejo con tus puntos -->
+  <div id="camCuerpo" aria-hidden="true">
+    <video id="videoCuerpo" playsinline muted autoplay></video>
+    <canvas id="lienzoCuerpo"></canvas>
+  </div>
   <div id="sondaSegura" aria-hidden="true"></div>
 
   <!-- Botón para agrandar la pantalla (en los menús) -->
@@ -103,6 +109,11 @@
         <button class="opcion-modo" id="modoEsquiva">👾 Esquiva marcianos</button>
       </div>
       <p class="pista-modo" id="txtModoPista"></p>
+      <div class="selector-control" id="selectorControl" role="group" aria-label="Control de Esquiva marcianos">
+        <span>Control</span>
+        <button id="ctrlNormal">🖱️ Normal</button>
+        <button id="ctrlCamara">🧍 Cámara</button>
+      </div>
       </div>
       <div class="col col-b">
       <label class="campo">
@@ -314,6 +325,24 @@
     </div>
   </section>
 
+  <section class="pantalla" id="pCamara">
+    <div class="panel panel-camara">
+      <h2>Control con cámara</h2>
+      <div id="huecoCam"></div>
+      <p class="estado-cam" id="txtCamEstado">📷 Preparando la cámara…</p>
+      <ul class="lista-cam">
+        <li>🧍 <b>Muévete</b> de lado o agáchate: la nave te sigue.</li>
+        <li>🔫 <b>Mano en pistola</b> (índice estirado): apuntas. <b>Baja el pulgar</b>: disparas.</li>
+        <li>✋ <b>Mano abierta</b>: impulso.</li>
+        <li>💡 Aléjate 1–2 metros, con luz de frente y que se vean tus hombros.</li>
+      </ul>
+      <div class="fila-botones">
+        <button class="btn btn-primario" id="btnCamListo" disabled>Esperando…</button>
+        <button class="btn btn-texto" id="btnCamCancelar">Usar control normal</button>
+      </div>
+    </div>
+  </section>
+
   <section class="pantalla" id="pIphone">
     <div class="panel panel-iphone">
       <h2>Ver más grande en iPhone</h2>
@@ -352,6 +381,7 @@
   <script src="js/progreso.js"></script>
   <script src="js/poderes.js"></script>
   <script src="js/juego.js"></script>
+  <script src="js/cuerpo.js"></script>
   <script src="js/esquiva.js"></script>
   <script src="js/tutorial.js"></script>
   <script src="js/red.js"></script>
