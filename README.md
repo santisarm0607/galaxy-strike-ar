@@ -1,13 +1,36 @@
-# 🛸 GALAXY STRIKE AR
+# 🛸 GALAXY STRIKE AR · versión 2
 
 Juego de aliens en 3D con **dos modos**:
 
 - 🎯 **Disparos AR** (para celular): ves tu cuarto por la cámara trasera, aparecen ovnis y aliens a tu alrededor y **el celular es tu arma**: apuntas moviéndolo, disparas tocando la pantalla y esquivas inclinándolo hacia un lado.
 - 👾 **Esquiva marcianos** (para PC): pilotas una nave 3D a toda velocidad y tienes que **esquivar a los marcianos** que vienen hacia ti.
 
-En el menú eliges el modo. En PC arranca seleccionado *Esquiva marcianos* y en el celular *Disparos AR*, pero los dos funcionan en ambos.
+Cada modo tiene **campaña de 4 sectores** (con jefe al final de cada uno) y **modo Infinito** para batir récords. Además: poderes, logros, naves desbloqueables, música, tutorial, ajustes, multijugador competitivo **o cooperativo**.
+
+Es **100 % web**: se juega desde el navegador con un enlace, sin instalar nada.
 
 Hecho por **SantiSarm** con HTML, CSS y JavaScript puro (sin frameworks).
+
+---
+
+## 🆕 Qué trae la versión 2
+
+| | |
+|---|---|
+| 🗺️ **Campaña** | 4 sectores con colores, oleadas con nombre y un jefe al final. Se desbloquean en orden. |
+| ⭐ **Estrellas** | ★★★ sin perder vidas · ★★ perdiendo hasta 2 · ★ si terminas. |
+| ♾️ **Infinito** | Oleadas cada vez más difíciles; cada 5 hay nave nodriza. Guarda tu **top 10**. |
+| 👾 **Enemigos nuevos** | Divisor (se parte en dos), Fantasma (se teletransporta), Blindado (escudo que aguanta un disparo) y emboscadas por la espalda. |
+| 🛸 **Jefes por fases** | La nave nodriza se enfurece, dispara en abanico y al final deja el **ojo expuesto**: dispárale ahí. |
+| ⚡ **Poderes** | Cápsulas con 🛡️ Escudo, ⏳ Cámara lenta, ✨ Puntos x2, 🔥 Ráfaga, 💣 Bomba y 🧲 Imán. |
+| 🔴 **Esquiva** | Láseres con hueco, anillos dorados para sumar puntos, marcianos que se teletransportan. |
+| 🏅 **15 logros** | Y **5 naves** que se desbloquean con ellos (cambian el color de tu nave y de tu láser). |
+| 🎵 **Música** | Synthwave hecha por código que sube de intensidad y cambia con el jefe. |
+| 🎓 **Tutorial** | Interactivo la primera vez de cada modo (y «Practicar» en *Cómo jugar*). |
+| ⚙️ **Ajustes** | Dificultad, música, sonido, vibración, sensibilidad, **modo zurdo** y calidad gráfica (auto/alta/baja). |
+| 🤝 **Cooperativo** | En línea: suman puntos en equipo, se mandan escudos y si caes vuelves a los 10 s. |
+| 🔥 **Reacciones** | Emojis en vivo durante las partidas en línea, y botón **Revancha** para el anfitrión. |
+| 🌎 **Récords mundiales** | Opcional, con Supabase (gratis). Ver más abajo. |
 
 ---
 
@@ -22,12 +45,15 @@ Hecho por **SantiSarm** con HTML, CSS y JavaScript puro (sin frameworks).
 | Pausa | Botón ❚❚ | Esc o P |
 
 **Enemigos**
-- 🟢 **Ovni** (100 pts): flota a tu alrededor y te dispara orbes de plasma. Antes de disparar se ve un brillo rosado debajo.
-- 🟡 **Dron** (150 pts): un alien con jetpack que viene directo hacia ti. ¡Dispárale antes de que llegue!
-- 🟣 **Nave nodriza** (1500 pts): sale cada 5 oleadas, aguanta muchos disparos y suelta drones. Al destruirla recuperas una vida.
-- 🔴 **Meteoro**: no se puede destruir. Tienes que **esquivarlo** inclinando el celular (+50 pts si lo esquivas).
+- 🟢 **Ovni** (100): flota a tu alrededor y te dispara orbes de plasma.
+- 🟡 **Dron** (150): un alien con jetpack que viene directo hacia ti.
+- 🟠 **Divisor**: al destruirlo se parte en dos mini-aliens.
+- 🟣 **Fantasma**: desaparece y aparece en otro lugar. Dispárale cuando se vuelva sólido.
+- 🔵 **Blindado**: tiene un escudo que aguanta el primer disparo.
+- 🛸 **Nave nodriza**: tiene fases; en la última su ojo queda expuesto y le haces mucho más daño ahí.
+- 🔴 **Meteoro**: no se puede destruir. **Esquívalo** inclinando el celular.
 
-Los orbes de plasma se pueden destruir (+25) o esquivar (+25). Si matas aliens seguidos haces **combo** y tus puntos se multiplican hasta **x4**. Las flechas del borde de la pantalla y el radar te muestran dónde hay enemigos fuera de tu vista.
+Dispárale a las **cápsulas** blancas para ganar un poder. Los combos multiplican tus puntos hasta **x4**. Las flechas del borde y el radar te muestran dónde hay enemigos fuera de tu vista.
 
 ---
 
@@ -39,15 +65,12 @@ Los orbes de plasma se pueden destruir (+25) o esquivar (+25). Si matas aliens s
 | Impulso | Clic o Espacio | Botón **IMPULSO** |
 | Pausa | Esc o P | Botón ❚❚ |
 
-- Los marcianos vienen hacia ti cada vez más rápido. Cada **20 segundos** subes de nivel.
-- Cuando un marciano te va a pegar, aparece un **círculo rojo** donde va a pasar: ¡muévete!
-- **Impulso:** te lanza rápido hacia donde te mueves y, mientras dura, los marcianos te atraviesan sin hacerte daño. Se recarga en 2 segundos.
-- Desde el nivel 3 llegan **muros de marcianos** con un hueco: tienes que pasar por ahí.
-- Cada 4 niveles llega la **nave nodriza** y te dispara orbes durante 12 segundos. Si sobrevives ganas +500.
-- Pasar raspando un marciano da **«¡por poco!»** (+25). Los **cristales** dan +50 y cada 12 te devuelven una vida.
-- Tienes 3 vidas. Los combos multiplican los puntos hasta x4.
-
-En multijugador, el anfitrión elige el modo de la sala. En *Esquiva marcianos*, cada 8 «¡por poco!» o cristales le mandas una **estampida de marcianos** a tus rivales.
+- En la **campaña** sobrevives 55 segundos en cada sector y luego aguantas a la nave nodriza (con sus fases).
+- En el **Infinito** subes de nivel cada 20 segundos y cada 4 niveles llega la nave nodriza.
+- El **círculo rojo** te avisa dónde va a pasar un marciano. Los **muros** y los **láseres** tienen un hueco.
+- **Impulso:** te lanza rápido y, mientras dura, nada te hace daño.
+- Pasa por dentro de los **anillos dorados** (+100), pasa raspando para un **«¡por poco!»** (+25) y junta **cristales** (+50; cada 12 = +1 ❤).
+- Atraviesa las **cápsulas** para ganar poderes (el 🧲 Imán atrae los cristales).
 
 ---
 
@@ -55,23 +78,29 @@ En multijugador, el anfitrión elige el modo de la sala. En *Esquiva marcianos*,
 
 ```
 galaxy-strike-ar/
-├── index.html          → pantallas y HUD
-├── manifest.webmanifest → datos para instalarlo como app (nombre, ícono, horizontal, pantalla completa)
-├── iconos/             → íconos de la app (iPhone y Android)
+├── index.html           → pantallas y HUD
+├── iconos/icono.png     → el ícono de la pestaña del navegador
 ├── css/
-│   └── estilos.css     → todo el diseño
+│   └── estilos.css      → todo el diseño
 └── js/
-    ├── utilidades.js   → matemática 3D (cuaterniones) y números aleatorios con semilla
-    ├── sonido.js       → efectos de sonido sintetizados (no usa archivos de audio)
-    ├── sensores.js     → cámara trasera, giroscopio y controles alternativos
-    ├── sprites.js      → brillos y dibujos 2D de respaldo (si el celular no tiene WebGL)
-    ├── motor3d.js      → motor 3D propio con WebGL: geometrías, luces y cámara
-    ├── modelos.js      → modelos 3D del ovni, dron, nave nodriza, orbe y meteoros
-    ├── juego.js        → modo Disparos AR: oleadas, enemigos, disparos, esquivar y dibujo
-    ├── esquiva.js      → modo Esquiva marcianos: nave, marcianos, muros, jefe, niveles
-    ├── red.js          → multijugador en línea (PeerJS)
-    ├── interfaz.js     → botones, pantallas, HUD y salas
-    └── main.js         → arranque y bucle del juego
+    ├── utilidades.js    → matemática 3D (cuaterniones) y números aleatorios con semilla
+    ├── config.js        → (opcional) datos de Supabase para los récords mundiales
+    ├── ajustes.js       → preferencias: dificultad, música, sensibilidad, zurdo, calidad…
+    ├── sonido.js        → efectos de sonido sintetizados
+    ├── musica.js        → música synthwave hecha por código
+    ├── sensores.js      → cámara trasera, giroscopio y controles alternativos
+    ├── sprites.js       → brillos y dibujos 2D de respaldo (si no hay WebGL)
+    ├── motor3d.js       → motor 3D propio con WebGL
+    ├── modelos.js       → modelos 3D: ovni, dron, nave nodriza, nave, cápsulas, anillos, láseres…
+    ├── sectores.js      → la campaña: sectores, colores y oleadas (¡fácil de editar!)
+    ├── progreso.js      → sectores ganados, estrellas, logros, naves y récords
+    ├── poderes.js       → los poderes y sus fichas en pantalla
+    ├── juego.js         → modo Disparos AR
+    ├── esquiva.js       → modo Esquiva marcianos
+    ├── tutorial.js      → tutorial interactivo
+    ├── red.js           → multijugador en línea (PeerJS)
+    ├── interfaz.js      → botones, pantallas, HUD y salas
+    └── main.js          → arranque, bucle del juego y calidad automática
 ```
 
 **¿Cómo funciona la realidad aumentada?** La pantalla tiene cuatro capas, una encima de otra:
@@ -81,9 +110,9 @@ galaxy-strike-ar/
 3. `#capa3d` (WebGL): los aliens en **3D de verdad**, con luz, brillo metálico, vidrio transparente y luces que parpadean.
 4. `#lienzo` (2D): brillos, explosiones, textos, mira, radar y flechas.
 
-Los aliens existen en un mundo 3D alrededor de ti. Cada cuadro el juego lee el giroscopio (`deviceorientation`), calcula hacia dónde apunta el celular y mueve la cámara 3D igual. Por eso, si giras, los aliens se quedan "quietos" en tu cuarto y los ves desde otro ángulo.
+Los aliens existen en un mundo 3D alrededor de ti. Cada cuadro el juego lee el giroscopio (`deviceorientation`), calcula hacia dónde apunta el celular y mueve la cámara 3D igual. Por eso, si giras, los aliens se quedan "quietos" en tu cuarto.
 
-**Modelos 3D:** están hechos con piezas simples (esferas, conos, donas y superficies de revolución) en `js/modelos.js`. Cada pieza tiene color, posición, rotación, escala y opciones como `emisivo` (brilla), `alfa` (transparente), `giro` (da vueltas) o `parpadeo`. Puedes cambiar colores o agregar piezas ahí mismo. No se usa ninguna librería 3D: el motor está en `js/motor3d.js`.
+**Modelos 3D:** están hechos con piezas simples (esferas, conos, donas y superficies de revolución) en `js/modelos.js`. No se usa ninguna librería 3D: el motor está en `js/motor3d.js`.
 
 ---
 
@@ -134,59 +163,84 @@ El juego está hecho para jugarse **en horizontal** (celular acostado):
 |---|---|
 | PC | Pantalla completa (o usa F11). |
 | Android (Chrome) | Pantalla completa y **bloquea el giro en horizontal**. Al empezar a jugar se pone en pantalla completa solo. |
-| iPhone (Safari) | Safari en iPhone **no permite** pantalla completa en páginas web ni bloquear el giro. El botón muestra cómo instalarlo como app (abajo). |
-| Ya instalado como app | El botón se esconde: ya está en pantalla completa. |
+| iPhone (Safari) | Safari en iPhone **no permite** pantalla completa en páginas web ni bloquear el giro. El botón explica cómo esconder la barra de Safari (abajo). |
 
 ---
 
 ## 🍎 Cómo verlo mejor en iPhone
 
-La mejor forma es **instalarlo como app web**: se abre sin las barras de Safari, con su propio ícono y en horizontal ocupa toda la pantalla.
+Safari en iPhone no deja poner páginas web en pantalla completa, pero así se ve casi igual:
 
 1. Abre el enlace `https://...` del juego en **Safari**.
-2. Toca **Compartir** (el cuadrito con la flecha hacia arriba).
-3. Toca **«Agregar a pantalla de inicio»**. En iOS 26 deja activado **«Abrir como app web»** (viene activado por defecto).
-4. Abre **Galaxy Strike** desde el ícono nuevo y **gira el celular**.
+2. Quita el **bloqueo de orientación** 🔒 (desliza desde la esquina de arriba a la derecha) y **gira el celular**.
+3. Toca el **ícono de la página** en la barra de Safari, al lado de la dirección (si no lo ves, toca **•••**), y elige **«Ocultar barra de herramientas»**. Para que vuelva, toca arriba o abajo de la pantalla.
 
 Consejos:
-- Si no gira la pantalla, quita el **bloqueo de orientación** 🔒 en el Centro de control (desliza desde la esquina de arriba a la derecha).
-- La cámara y el giroscopio también funcionan desde la app instalada. La primera vez te vuelve a pedir los permisos.
+- El juego se acomoda a la muesca / isla dinámica y a las esquinas redondeadas, así que nada queda tapado.
 - Si no se escucha el sonido, revisa que el iPhone no esté en silencio y sube el volumen.
-- Si cambias el código y no ves los cambios en la app instalada, ciérrala del todo y ábrela de nuevo.
+- Si cambias el código y no ves los cambios, recarga la página.
 
 ---
 
 ## 🌐 Multijugador en línea
 
-- Uno toca **Crear sala** y le sale un código de 4 letras (por ejemplo `HA8T`). Los demás escriben ese código en **Unirse**. Hasta **4 pilotos**.
-- También puedes tocar **Compartir**: manda un enlace que ya trae el código.
-- Todos enfrentan **la misma invasión** (las oleadas salen iguales para todos), cada uno en su propio espacio.
-- La partida dura **3 minutos**. Gana quien haga más puntos. Hay marcador en vivo.
-- Cada **8 kills** le mandas una **lluvia de meteoros** a tus rivales. Destruir la nave nodriza manda una lluvia más grande.
+- Uno toca **Crear sala** y le sale un código de 4 letras (por ejemplo `HA8T`). Los demás lo escriben en **Unirse**. Hasta **4 pilotos**. También puedes tocar **Compartir** para mandar un enlace con el código.
+- El anfitrión elige el **modo** (en el menú, antes de crear la sala) y el **tipo de partida** (botón en la sala):
+  - ⚔️ **Competencia:** gana quien haga más puntos en 3 minutos. Cada 8 kills le mandas meteoros (o una estampida en *Esquiva*) a tus rivales.
+  - 🤝 **Cooperativo:** suman puntos para llegar a la meta del equipo (6.000 por piloto). Cuando llenas tu barra le mandas un **escudo** a tu equipo, y si caes vuelves a los 10 segundos.
+- Todos enfrentan **la misma invasión** (las oleadas salen iguales para todos), cada uno en su espacio. En línea todos juegan en dificultad Normal.
+- Durante la partida hay **reacciones** (🔥😂😱👏) a la derecha de la pantalla. Al terminar, el anfitrión tiene **🔁 Revancha**.
 
-Funciona con **PeerJS** (WebRTC): los celulares se conectan directo entre ellos usando el servidor público gratuito de PeerJS para encontrarse, así que **no necesitas montar un servidor**. El que crea la sala es el anfitrión: si él sale, la sala se cierra.
+Funciona con **PeerJS** (WebRTC): los celulares se conectan directo usando el servidor público gratuito de PeerJS para encontrarse, así que **no necesitas montar un servidor**. Si el anfitrión sale, la sala se cierra.
 
 > Si no conecta: algunas redes WiFi de colegios o universidades bloquean WebRTC. Prueba con datos móviles.
 
 ---
 
-## 🛠️ Personalizar
+## 🌎 Récords mundiales (opcional, gratis con Supabase)
 
-En `js/juego.js`, al inicio, está `CONFIG`:
+Sin configurar nada, los récords se guardan en cada dispositivo (top 10). Para tener una **tabla mundial**:
+
+1. Crea una cuenta y un proyecto en [supabase.com](https://supabase.com).
+2. Ve a **SQL Editor** y ejecuta esto:
+
+```sql
+create table records (
+  id bigint generated always as identity primary key,
+  nombre text not null check (char_length(nombre) between 1 and 14),
+  puntos integer not null check (puntos > 0 and puntos < 10000000),
+  tipo text not null check (tipo in ('ar', 'esquiva')),
+  creado timestamptz not null default now()
+);
+alter table records enable row level security;
+create policy "todos pueden ver" on records for select using (true);
+create policy "todos pueden agregar" on records for insert with check (true);
+```
+
+3. En **Project Settings → API Keys** copia la *Project URL* y la llave pública (*publishable key* `sb_publishable_…`, o la *anon public key* en proyectos viejos) y pégalas en `js/config.js`:
 
 ```js
-const CONFIG = {
-  vidasMax: 5,
-  cadencia: 0.17,          // segundos entre disparos
-  ayudaApuntado: 16,       // píxeles de ayuda al apuntar
-  distanciaEsquive: 1.7,   // cuánto te mueves al inclinar el celular
-  killsParaAtaque: 8,      // kills para mandar meteoros en línea
-  jefeCada: 5              // cada cuántas oleadas sale la nave nodriza
+window.GS.CONFIG_GLOBAL = {
+  supabaseUrl: 'https://xxxx.supabase.co',
+  supabaseKey: 'sb_publishable_...'
 };
 ```
 
-El modo *Esquiva marcianos* tiene su propio `CFG` al inicio de `js/esquiva.js` (vidas, velocidad, segundos por nivel, cada cuánto sale la nave nodriza, recarga del impulso…).
+Listo: al terminar una partida del modo Infinito se envía el puntaje, y en **Logros → Récords** aparece la tabla 🌎 Mundial.
 
-En `js/interfaz.js` puedes cambiar `DURACION_ONLINE` (segundos de cada partida en línea) y `MAX_JUGADORES`.
+> Ojo: como el juego no tiene cuentas de usuario, alguien que sepa programar podría mandar puntajes falsos. Para un juego entre amigos está bien; si se vuelve popular, toca agregar validación.
 
-Los puntos de cada enemigo están en `PUNTOS` (también en `juego.js`) y los dibujos de los aliens en `js/sprites.js`.
+---
+
+## 🛠️ Personalizar
+
+- **Oleadas y sectores:** en `js/sectores.js`. Cada oleada es una lista de grupos, por ejemplo `{ tipo: 'divisor', n: 4, cada: 1.2, desde: 3, detras: true }` (4 divisores, uno cada 1,2 s, desde el segundo 3, apareciendo por tu espalda). También puedes cambiar los colores de cada sector y lo que pasa en *Esquiva* (`vel`, `laseres`, `muros`, `jefeFases`…).
+- **Disparos AR:** `CONFIG` al inicio de `js/juego.js` (vidas, cadencia, ayuda al apuntar, distancia del esquive…).
+- **Esquiva marcianos:** `CFG` al inicio de `js/esquiva.js` (vidas, velocidad, segundos por sector, cristales por vida…).
+- **Poderes:** `TIPOS` en `js/poderes.js` (duración, ícono, color y en qué modo salen).
+- **Logros y naves:** `LOGROS` y `NAVES` en `js/progreso.js`.
+- **Dificultades:** `DIFICULTAD` en `js/ajustes.js`.
+- **Multijugador:** `DURACION_ONLINE`, `MAX_JUGADORES` y `META_COOP_POR_JUGADOR` en `js/interfaz.js`.
+- **Música:** tempo y acordes al inicio de `js/musica.js`.
+
+Para borrar todo tu progreso: en el navegador, abre la consola (F12) y escribe `localStorage.clear()`.

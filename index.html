@@ -4,18 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#05060f">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Galaxy Strike">
   <meta name="format-detection" content="telephone=no">
   <meta name="description" content="Juego de aliens en 3D: dispárales en realidad aumentada o esquívalos a toda velocidad.">
   <title>Galaxy Strike AR</title>
-  <!-- PWA: para instalarlo como app (iPhone: Compartir → Agregar a pantalla de inicio) -->
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="iconos/icono-180.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="iconos/icono-192.png">
-  <!-- /PWA -->
+  <!-- ICONO: el ícono de la pestaña del navegador -->
+  <link rel="icon" type="image/png" href="iconos/icono.png">
+  <!-- /ICONO -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
@@ -64,10 +58,26 @@
 
     <div id="avisos"></div>
 
-    <div id="capaEliminado" class="oculto">
-      <b>ELIMINADO</b>
-      <span>Mira el marcador: la partida termina cuando acabe el tiempo.</span>
+    <div id="poderes" aria-live="polite"></div>
+
+    <div id="equipo" class="oculto">
+      <span id="txtEquipo">🤝 EQUIPO 0 / 0</span>
+      <div class="barra"><div id="barraEquipo"></div></div>
     </div>
+
+    <div id="capaEliminado" class="oculto">
+      <b id="txtEliminadoTitulo">ELIMINADO</b>
+      <span id="txtEliminado">Mira el marcador: la partida termina cuando acabe el tiempo.</span>
+    </div>
+
+    <div id="tutorialCaja" class="oculto" role="status" aria-live="polite">
+      <span id="tutContador">TUTORIAL</span>
+      <p id="tutTexto"></p>
+      <button class="btn btn-mini" id="btnSaltarTutorial">Saltar tutorial ⏭</button>
+    </div>
+
+    <div id="reacciones" aria-hidden="true"></div>
+    <div id="barraEmojis" aria-label="Reacciones"></div>
 
     <div id="pistaTeclas">Mouse: apuntar · Clic / Espacio: disparar · A / D: esquivar · R: centrar</div>
 
@@ -101,7 +111,11 @@
       </label>
       <button class="btn btn-primario" id="btnSolo">▶ Jugar solo</button>
       <button class="btn btn-secundario" id="btnOnline">🌐 Multijugador en línea</button>
-      <button class="btn btn-texto" id="btnComo">¿Cómo se juega?</button>
+      <div class="fila-iconos">
+        <button class="btn-icono" id="btnPerfil"><span>🏅</span>Logros</button>
+        <button class="btn-icono" id="btnAjustes"><span>⚙️</span>Ajustes</button>
+        <button class="btn-icono" id="btnComo"><span>❓</span>Cómo jugar</button>
+      </div>
       <div class="pie">
         <span>Récord: <b id="txtRecord">0</b></span>
         <span class="firma">por SantiSarm</span>
@@ -111,8 +125,9 @@
   </section>
 
   <section class="pantalla" id="pComo">
-    <div class="panel">
+    <div class="panel panel-como">
       <h2>Cómo se juega</h2>
+      <p class="nota">Elige un <b>sector</b> de la campaña (5 oleadas y un jefe cada uno) o el modo <b>♾️ Infinito</b> para batir récords. Gana hasta ★★★ terminando un sector sin perder vidas.</p>
       <h3 class="subtitulo">🎯 Disparos AR <small>(celular)</small></h3>
       <div class="pasos">
         <div class="paso"><span class="ico">📱</span><b>Apunta</b><small>Mueve el celular como si fuera tu arma. La mira está en el centro.</small></div>
@@ -121,21 +136,32 @@
         <div class="paso"><span class="ico">🧭</span><b>Busca</b><small>Las flechas del borde y el radar te dicen dónde hay aliens. Gira con ellos.</small></div>
       </div>
       <div class="enemigos">
-        <div><i class="punto verde"></i>Ovni · 100 pts · te dispara orbes</div>
-        <div><i class="punto amarillo"></i>Dron · 150 pts · viene hacia ti</div>
-        <div><i class="punto morado"></i>Nave nodriza · 1500 pts · cada 5 oleadas</div>
+        <div><i class="punto verde"></i>Ovni · te dispara orbes</div>
+        <div><i class="punto amarillo"></i>Dron · viene directo hacia ti</div>
+        <div><i class="punto naranja"></i>Divisor · al destruirlo se parte en dos</div>
+        <div><i class="punto cian"></i>Fantasma · desaparece y aparece en otro lado</div>
+        <div><i class="punto azul"></i>Blindado · su escudo aguanta un disparo</div>
+        <div><i class="punto morado"></i>Nave nodriza · 3 fases; al final dispárale al ojo</div>
         <div><i class="punto rojo"></i>Meteoro · indestructible · ¡esquívalo!</div>
       </div>
-      <p class="nota">Combos de kills seguidos multiplican tus puntos hasta x4. En línea, cada 8 kills le mandas meteoros a tus rivales.</p>
+      <h3 class="subtitulo">⚡ Poderes <small>(dispárale o atraviesa la cápsula)</small></h3>
+      <div class="poderes-lista">
+        <span>🛡️ Escudo</span><span>⏳ Cámara lenta</span><span>✨ Puntos x2</span><span>🔥 Ráfaga</span><span>💣 Bomba</span><span>🧲 Imán</span>
+      </div>
       <h3 class="subtitulo">👾 Esquiva marcianos <small>(PC)</small></h3>
       <div class="enemigos">
         <div>🖱️ Mueve tu nave con el <b>mouse</b> (o <b>WASD / flechas</b>; en celular, arrastra el dedo).</div>
-        <div>💨 <b>Clic o Espacio</b>: impulso rápido; mientras dura, los marcianos no te hacen daño.</div>
+        <div>💨 <b>Clic o Espacio</b>: impulso rápido; mientras dura, nada te hace daño.</div>
         <div>⭕ El <b>círculo rojo</b> te avisa que ese marciano te va a pegar. ¡Muévete!</div>
-        <div>🧱 Los <b>muros</b> tienen un hueco: pasa por ahí.</div>
+        <div>🧱🔴 Los <b>muros</b> y los <b>láseres</b> tienen un hueco: pasa por ahí.</div>
+        <div>🟡 Pasa por dentro de los <b>anillos dorados</b> para sumar puntos y combo.</div>
         <div>💎 Pasar raspando da <b>«¡por poco!»</b> y los cristales dan puntos. 12 cristales = +1 ❤.</div>
       </div>
-      <button class="btn btn-primario" id="btnComoListo">¡Entendido!</button>
+      <p class="nota">Combos seguidos multiplican tus puntos hasta x4. En línea: en competencia le mandas ataques a tus rivales; en cooperativo, escudos a tu equipo.</p>
+      <div class="fila-botones">
+        <button class="btn btn-secundario" id="btnPracticar">🎓 Practicar (tutorial)</button>
+        <button class="btn btn-primario" id="btnComoListo">¡Entendido!</button>
+      </div>
     </div>
   </section>
 
@@ -154,7 +180,7 @@
   <section class="pantalla" id="pOnline">
     <div class="panel">
       <h2>Multijugador en línea</h2>
-      <p class="texto">Todos enfrentan la misma invasión, cada uno en su espacio. Gana quien haga más puntos en 3 minutos. Hasta 4 pilotos.</p>
+      <p class="texto">Todos enfrentan la misma invasión, cada uno en su espacio, durante 3 minutos. Compitan por más puntos o jueguen en equipo. Hasta 4 pilotos.</p>
       <button class="btn btn-primario" id="btnCrear">Crear sala</button>
       <div class="separador"><span>o únete con un código</span></div>
       <div class="fila-codigo">
@@ -177,6 +203,7 @@
         <button class="btn btn-mini" id="btnCompartir">Compartir</button>
       </div>
       <div class="modo-sala" id="txtModoSala"></div>
+      <button class="btn btn-mini btn-tipo-partida" id="btnTipoPartida">⚔️ Competencia</button>
       <p class="nota" id="txtSalaEstado"></p>
       </div>
       <div class="col col-b">
@@ -185,6 +212,75 @@
       <button class="btn btn-primario" id="btnEmpezar">¡Empezar partida!</button>
       <button class="btn btn-texto" id="btnSalirSala">Salir de la sala</button>
       </div>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pSectores">
+    <div class="panel panel-ancho">
+      <h2>Elige tu misión</h2>
+      <p class="nota" id="txtSectoresModo"></p>
+      <div class="lista-sectores" id="listaSectores"></div>
+      <button class="btn btn-texto" id="btnSectoresVolver">Volver</button>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pAjustes">
+    <div class="panel panel-ancho panel-ajustes">
+      <h2>Ajustes</h2>
+      <div class="ajustes-grid">
+        <div class="ajuste">
+          <span class="etq">Dificultad</span>
+          <div class="segmentos" data-ajuste="dificultad">
+            <button data-valor="facil">🙂 Fácil</button><button data-valor="normal">😎 Normal</button><button data-valor="dificil">😈 Difícil</button>
+          </div>
+          <small class="nota" id="notaDificultad"></small>
+        </div>
+        <div class="ajuste">
+          <span class="etq">Calidad gráfica</span>
+          <div class="segmentos" data-ajuste="calidad">
+            <button data-valor="auto">🤖 Auto</button><button data-valor="alta">✨ Alta</button><button data-valor="baja">🔋 Baja</button>
+          </div>
+          <small class="nota">«Auto» baja la calidad sola si tu equipo va lento.</small>
+        </div>
+        <div class="ajuste">
+          <span class="etq">Música</span>
+          <div class="segmentos" data-ajuste="musica"><button data-valor="true">🎵 Sí</button><button data-valor="false">🔇 No</button></div>
+        </div>
+        <div class="ajuste">
+          <span class="etq">Efectos de sonido</span>
+          <div class="segmentos" data-ajuste="sonido"><button data-valor="true">🔊 Sí</button><button data-valor="false">🔇 No</button></div>
+        </div>
+        <div class="ajuste">
+          <span class="etq">Vibración</span>
+          <div class="segmentos" data-ajuste="vibracion"><button data-valor="true">📳 Sí</button><button data-valor="false">📴 No</button></div>
+        </div>
+        <div class="ajuste">
+          <span class="etq">Botones para</span>
+          <div class="segmentos" data-ajuste="zurdo"><button data-valor="false">🫱 Diestros</button><button data-valor="true">🫲 Zurdos</button></div>
+        </div>
+        <div class="ajuste ajuste-ancho">
+          <span class="etq">Sensibilidad de la mira y la nave <b id="txtSensibilidad">100%</b></span>
+          <input type="range" id="rngSensibilidad" min="0.5" max="1.6" step="0.05" value="1">
+        </div>
+      </div>
+      <div class="fila-botones">
+        <button class="btn btn-secundario" id="btnRepetirTutorial">🎓 Volver a ver el tutorial</button>
+        <button class="btn btn-primario" id="btnAjustesListo">Listo</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pPerfil">
+    <div class="panel panel-ancho">
+      <h2>Tu piloto</h2>
+      <div class="pestanas" role="tablist">
+        <button data-pestana="logros">🏅 Logros</button>
+        <button data-pestana="records">🏆 Récords</button>
+        <button data-pestana="naves">🚀 Naves</button>
+      </div>
+      <p class="nota" id="txtPerfilResumen"></p>
+      <div id="perfilContenido"></div>
+      <button class="btn btn-primario" id="btnPerfilListo">Listo</button>
     </div>
   </section>
 
@@ -201,7 +297,7 @@
       <p class="nota" id="txtPausaNota"></p>
       <button class="btn btn-primario" id="btnContinuar">Continuar</button>
       <button class="btn btn-secundario" id="btnRecentrar">🎯 Centrar la mira aquí</button>
-      <button class="btn btn-secundario" id="btnSonido">🔊 Sonido: sí</button>
+      <button class="btn btn-secundario" id="btnAjustesPausa">⚙️ Ajustes</button>
       <button class="btn btn-secundario" id="btnPantallaPausa">⛶ Pantalla completa</button>
       <button class="btn btn-texto" id="btnSalirJuego">Salir al menú</button>
     </div>
@@ -210,39 +306,54 @@
   <section class="pantalla" id="pFin">
     <div class="panel">
       <h2 id="txtFinTitulo">FIN DEL JUEGO</h2>
+      <div class="fin-estrellas" id="finEstrellas"></div>
       <div id="finContenido"></div>
       <button class="btn btn-primario" id="btnOtraVez">Jugar otra vez</button>
+      <button class="btn btn-secundario oculto" id="btnFinExtra">Repetir</button>
       <button class="btn btn-texto" id="btnMenu">Menú principal</button>
     </div>
   </section>
 
   <section class="pantalla" id="pIphone">
     <div class="panel panel-iphone">
-      <h2>Pantalla completa en iPhone</h2>
-      <p class="texto">Safari en iPhone no deja poner páginas en pantalla completa. Instálalo como app y se abre sin barras:</p>
+      <h2>Ver más grande en iPhone</h2>
+      <p class="texto">Safari en iPhone no deja poner páginas web en pantalla completa, pero sí puedes esconder sus barras:</p>
       <ol class="pasos-iphone">
-        <li><span class="num">1</span><div>Toca el botón <b>Compartir</b> <span class="ico-compartir" aria-hidden="true"></span> de Safari.</div></li>
-        <li><span class="num">2</span><div>Elige <b>«Agregar a pantalla de inicio»</b> (deja activado <b>«Abrir como app web»</b>).</div></li>
-        <li><span class="num">3</span><div>Abre <b>Galaxy Strike</b> desde su ícono y <b>gira el celular</b>.</div></li>
+        <li><span class="num">1</span><div>Quita el candado 🔒 de rotación (desliza desde la esquina de arriba a la derecha) y <b>gira el celular</b>.</div></li>
+        <li><span class="num">2</span><div>Toca el <b>ícono de la página</b> en la barra de Safari, al lado de la dirección (si no lo ves, toca <b>•••</b>).</div></li>
+        <li><span class="num">3</span><div>Elige <b>«Ocultar barra de herramientas»</b>. Para que vuelva, toca arriba o abajo de la pantalla.</div></li>
       </ol>
-      <p class="nota">Activa también la rotación: desliza desde la esquina de arriba a la derecha y quita el candado 🔒 de orientación.</p>
+      <p class="nota">El juego ya se acomoda a la muesca y a las esquinas redondeadas del iPhone.</p>
       <button class="btn btn-primario" id="btnIphoneListo">Entendido</button>
     </div>
   </section>
 
   <div id="toast" role="status" aria-live="polite"></div>
 
+  <!-- Aviso de logro desbloqueado -->
+  <div id="logroToast" class="oculto" role="status" aria-live="polite">
+    <span id="logroIcono">🏅</span>
+    <div><small>¡LOGRO DESBLOQUEADO!</small><b id="logroNombre"></b><em id="logroExtra"></em></div>
+  </div>
+
   <!-- PEERJS: multijugador en línea (WebRTC entre celulares) -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <!-- /PEERJS -->
   <script src="js/utilidades.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/ajustes.js"></script>
   <script src="js/sonido.js"></script>
+  <script src="js/musica.js"></script>
   <script src="js/sensores.js"></script>
   <script src="js/sprites.js"></script>
   <script src="js/motor3d.js"></script>
   <script src="js/modelos.js"></script>
+  <script src="js/sectores.js"></script>
+  <script src="js/progreso.js"></script>
+  <script src="js/poderes.js"></script>
   <script src="js/juego.js"></script>
   <script src="js/esquiva.js"></script>
+  <script src="js/tutorial.js"></script>
   <script src="js/red.js"></script>
   <script src="js/interfaz.js"></script>
   <script src="js/main.js"></script>

@@ -311,7 +311,9 @@
 
   /**
    * Dibuja un modelo (lista de partes) en una posición, rotación y escala.
-   * opc: { t (tiempo, para animar), destello (0..1), apagado (bool) }
+   * opc: { t (tiempo, para animar), destello (0..1), apagado (bool),
+   *        colores: { rol: [r, g, b] } (pinta de otro color las piezas con ese rol),
+   *        alfa: 0..1 (hace todo el modelo más transparente) }
    */
   M3.dibujarModelo = function (partes, pos, rot, esc, opc = {}) {
     const base = M4.trs(pos, rot, esc);
@@ -330,9 +332,11 @@
       let emisivo = pa.emisivo;
       if (pa.parpadeo != null) emisivo = ((Math.floor(t * 4) + pa.parpadeo) % 2) ? 1 : 0.1;
       if (opc.apagado && pa.emisivo > 0.5) emisivo = 0.15;
-      const datos = { color: pa.color, emisivo, alfa: pa.alfa, brillo: pa.brillo, destello: opc.destello || 0 };
+      const color = (opc.colores && pa.rol && opc.colores[pa.rol]) || pa.color;
+      const alfa = opc.alfa != null ? pa.alfa * opc.alfa : pa.alfa;
+      const datos = { color, emisivo, alfa, brillo: pa.brillo, destello: opc.destello || 0 };
       const modelo = M4.mult(base, M4.trs(lpos, lrot, lesc));
-      if (pa.alfa < 1) transparentes.push([pa.malla, modelo, datos]);
+      if (alfa < 1) transparentes.push([pa.malla, modelo, datos]);
       else dibujarParte(pa.malla, modelo, datos);
     }
   };

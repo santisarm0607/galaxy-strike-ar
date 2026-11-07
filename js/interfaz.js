@@ -18,15 +18,18 @@
   let ultimoSegundo = -1;
 
   const Sala = {
-    jugadores: [], estados: {}, hostId: null, enPartida: false, partida: null, tipo: 'ar',
-    esperando: null, timerLobby: null, timerEstado: null
+    jugadores: [], estados: {}, hostId: null, enPartida: false, partida: null, tipo: 'ar', coop: false, meta: 0,
+    esperando: null, timerLobby: null, timerEstado: null, reviveEn: -1
   };
+  const META_COOP_POR_JUGADOR = 6000; // puntos de equipo por piloto en el modo cooperativo
+  let sectorElegido = null;           // 1-4 = campaña, null = infinito
+  let volverDesdeAjustes = 'pInicio';
+  let ultimoTextoOleada = '';
 
   /* Tipo de juego: 'ar' (Disparos AR, para celular) o 'esquiva' (Esquiva marcianos, para PC) */
   const NOMBRE_TIPO = { ar: '🎯 Disparos AR', esquiva: '👾 Esquiva marcianos' };
   const esPC = () => !(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   let tipoElegido = 'ar';
-  const claveRecord = (tipo) => (tipo === 'esquiva' ? 'gs_record_esquiva' : 'gs_record');
 
   /* ---------------- Utilidades de interfaz ---------------- */
   function mostrar(id) {
@@ -72,12 +75,9 @@
 
   /* ---------------- Pantalla completa y orientación ----------------
      - Android y PC: API de pantalla completa (+ bloqueo horizontal en Android).
-     - iPhone: Safari no la tiene; la mejor opción es instalarlo como app
-       (Compartir → Agregar a pantalla de inicio). */
+     - iPhone: Safari no la tiene; se explica cómo esconder la barra de Safari. */
   const esTactil = () => !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   const esIOS = () => /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const esAppInstalada = () => navigator.standalone === true ||
-    (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches));
   const enPantallaCompleta = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
   function puedePantallaCompleta() {
     const el = document.documentElement;
@@ -116,11 +116,7 @@
   function alternarPantallaCompleta() {
     if (enPantallaCompleta()) { salirPantallaCompleta(); return; }
     if (puedePantallaCompleta()) { entrarPantallaCompleta(); return; }
-    if (esIOS() && GS.MODO_PRUEBA) {
-      toast('En iPhone, la pantalla completa se logra instalando el juego publicado como app (el botón ⛶ te explica cómo allá).', 4500);
-      return;
-    }
-    if (esIOS() && !esAppInstalada()) {
+    if (esIOS()) {
       volverDesdeIphone = pantalla || 'pInicio';
       mostrar('pIphone');
       return;
@@ -196,7 +192,7 @@
 
   /* ---------------- Cuenta regresiva ---------------- */
   let ivCuenta = null;
-  function cuentaRegresiva(alTerminar) {
+  function cuentaRegresiva(alTerminar, pista) {
     clearInterval(ivCuenta);
     J.estado = 'cuenta';
     // Si el celular está vertical, esperamos a que lo gire antes de contar
@@ -204,13 +200,13 @@
       $('hud').classList.add('oculto');
       mostrar('pCuenta');
       $('txtCuenta').textContent = '';
-      cuandoHorizontal(() => cuentaRegresiva(alTerminar));
+      cuandoHorizontal(() => cuentaRegresiva(alTerminar, pista));
       return;
     }
     $('hud').classList.add('oculto');
     mostrar('pCuenta');
     const el = $('txtCuenta');
-    $('txtCuentaPista').textContent = J.tipoJuego === 'esquiva' ? '¡Prepárate para esquivar!' : 'Apunta el celular al frente';
+    $('txtCuentaPista').textContent = pista || (J.tipoJuego === 'esquiva' ? '¡Prepárate para esquivar!' : 'Apunta el celular al frente');
     let n = 3;
     const pintar = (txt) => {
       el.textContent = txt;
@@ -247,7 +243,15 @@
     $('avisos').innerHTML = '';
     $('hudTiempo').textContent = modo === 'online' ? formatoTiempo(DURACION_ONLINE) : '';
     $('hudOleada').textContent = 'PREPÁRATE';
+    $('hudCombo').textContent = '';
+    $('hudPuntos').textContent = '0';
+    $('reacciones').innerHTML = '';
+    $('equipo').classList.toggle('oculto', !(modo === 'online' && Sala.coop));
+    $('cargaAtaque').querySelector('span').textContent = Sala.coop && modo === 'online' ? '🛡️ AYUDA' : J.tipoJuego === 'esquiva' ? '👾 ESTAMPIDA' : '☄️ ATAQUE';
+    GS.Poderes.reiniciar();
     ultimoSegundo = -1;
+    ultimoTextoOleada = '';
+    Sala.reviveEn = -1;
     renderMarcador();
   }
 
@@ -270,8 +274,18 @@
     cont.classList.add('golpe');
   }
 
-  UI.tick = function () {
+  UI.tick = function (dt) {
     if (J.estado !== 'jugando') return;
+    if (J.tipoJuego === 'esquiva') {
+      const t = GS.Esquiva.progreso();
+      if (t !== ultimoTextoOleada) { ultimoTextoOleada = t; $('hudOleada').textContent = t; }
+    }
+    // Cooperativo: volver a la partida después de caer
+    if (Sala.reviveEn > 0) {
+      Sala.reviveEn -= dt || 0;
+      $('txtEliminado').textContent = 'Vuelves en ' + Math.max(1, Math.ceil(Sala.reviveEn)) + ' s… tu equipo sigue sumando.';
+      if (Sala.reviveEn <= 0) { Sala.reviveEn = -1; $('capaEliminado').classList.add('oculto'); J.revivir(); enviarEstado(); }
+    }
     if (J.modo === 'online') {
       const s = Math.ceil(J.tiempo);
       if (s !== ultimoSegundo) {
@@ -290,24 +304,41 @@
     const m = J.multiplicador();
     $('hudCombo').textContent = J.combo >= 2 ? 'COMBO ' + J.combo + (m > 1 ? ' · x' + m : '') : '';
   });
-  J.on('oleada', (n, jefe) => {
-    const etq = J.tipoJuego === 'esquiva' ? 'NIVEL ' : 'OLEADA ';
-    $('hudOleada').textContent = etq + n;
-    aviso(jefe ? '⚠️ ¡NAVE NODRIZA!' : etq + n, jefe ? 'peligro' : 'info');
+  J.on('oleada', (n, jefe, nombreOleada) => {
+    if (J.tutorial) return;
+    if (J.tipoJuego === 'esquiva') {
+      aviso(J.campana ? 'SECTOR ' + J.campana + ' · ' + (nombreOleada || '') : jefe ? '⚠️ ¡NAVE NODRIZA!' : 'NIVEL ' + n, jefe ? 'peligro' : 'info');
+      return;
+    }
+    const total = J.totalOleadas();
+    $('hudOleada').textContent = J.campana ? 'SECTOR ' + J.campana + ' · OLEADA ' + n + '/' + total : 'OLEADA ' + n;
+    const txt = (jefe ? '⚠️ ' : 'OLEADA ' + n + (total ? '/' + total : '') + ' · ') + (nombreOleada || '');
+    aviso(txt, jefe ? 'peligro' : 'info', 2300);
   });
   J.on('oleadaSuperada', (n) => aviso('¡OLEADA ' + n + ' SUPERADA!', 'exito'));
   J.on('aviso', (txt, clase) => aviso(txt, clase, 2200));
   J.on('muerte', () => {
-    if (J.modo === 'online') {
-      $('capaEliminado').classList.remove('oculto');
-      enviarEstado();
-      revisarTodosEliminados();
+    if (J.modo !== 'online') return;
+    $('capaEliminado').classList.remove('oculto');
+    if (Sala.coop) {
+      Sala.reviveEn = 10;
+      $('txtEliminadoTitulo').textContent = 'CAÍSTE';
+    } else {
+      $('txtEliminadoTitulo').textContent = 'ELIMINADO';
+      $('txtEliminado').textContent = 'Mira el marcador: la partida termina cuando acabe el tiempo.';
     }
+    enviarEstado();
+    revisarTodosEliminados();
   });
   J.on('ataque', (n) => {
     if (!R.conectado) return;
+    if (Sala.coop) {
+      R.enviar({ t: 'ayuda', nombre: nombre() });
+      aviso('🛡️ ¡Le mandaste un escudo a tu equipo!', 'exito');
+      return;
+    }
     R.enviar({ t: 'ataque', nombre: nombre(), n });
-    aviso('🚀 ¡Lluvia de meteoros enviada a tus rivales!', 'exito');
+    aviso(J.tipoJuego === 'esquiva' ? '🚀 ¡Estampida enviada a tus rivales!' : '🚀 ¡Lluvia de meteoros enviada a tus rivales!', 'exito');
   });
   J.on('fin', mostrarFin);
 
@@ -323,50 +354,98 @@
     return d;
   }
 
-  function mostrarFin() {
+  function estrellasTexto(n) { return '★'.repeat(n) + '☆'.repeat(3 - n); }
+
+  function mostrarFin(motivo) {
     $('hud').classList.add('oculto');
     $('capaEliminado').classList.add('oculto');
+    GS.Tutorial.cancelar();
     soltarWakeLock();
+    GS.Musica.tocar('menu');
     A.finJuego();
     const cont = $('finContenido');
     cont.innerHTML = '';
+    const extra = $('btnFinExtra');
+    extra.classList.add('oculto');
+    $('finEstrellas').textContent = '';
     if (J.modo === 'solo') {
-      const clave = claveRecord(J.tipoJuego);
-      const record = numero(leer(clave, '0'));
-      const nuevo = J.puntos > record;
-      if (nuevo) guardar(clave, String(J.puntos));
-      mostrarRecord();
-      $('txtFinTitulo').textContent = nuevo ? '¡NUEVO RÉCORD!' : 'FIN DEL JUEGO';
-      if (J.tipoJuego === 'esquiva') {
+      const tipo = J.tipoJuego;
+      if (tipo === 'esquiva') {
         const st = GS.Esquiva.estadisticas();
         cont.append(
           fila('Puntos', J.puntos.toLocaleString('es-CO'), true),
-          fila('Nivel alcanzado', String(st.nivel)),
+          fila(J.campana ? 'Sector' : 'Nivel alcanzado', String(J.campana || st.nivel)),
           fila('Tiempo vivo', formatoTiempo(st.tiempo)),
           fila('¡Por poco!', String(st.porPoco)),
           fila('Cristales', String(st.cristales)),
-          fila('Récord', Math.max(record, J.puntos).toLocaleString('es-CO'))
+          fila('Anillos', String(st.anillos))
         );
       } else {
         const precision = J.disparos ? Math.round((J.aciertos / J.disparos) * 100) : 0;
         cont.append(
           fila('Puntos', J.puntos.toLocaleString('es-CO'), true),
-          fila('Oleada alcanzada', String(J.oleada)),
+          fila(J.campana ? 'Oleada' : 'Oleada alcanzada', J.campana ? J.oleada + '/' + J.totalOleadas() : String(J.oleada)),
           fila('Aliens destruidos', String(J.kills)),
           fila('Esquivados', String(J.esquivados)),
           fila('Precisión', precision + '%'),
-          fila('Récord', Math.max(record, J.puntos).toLocaleString('es-CO'))
+          fila('Vidas perdidas', String(J.vidasPerdidas))
         );
       }
-      $('btnOtraVez').textContent = 'Jugar otra vez';
+      if (J.campana) {
+        const sec = GS.Sectores.get(J.campana);
+        if (motivo === 'victoria') {
+          const est = J.vidasPerdidas === 0 ? 3 : J.vidasPerdidas <= 2 ? 2 : 1;
+          const r = GS.Progreso.completarSector(tipo, J.campana, est, J.puntos);
+          $('txtFinTitulo').textContent = J.campana === GS.Sectores.total ? '👑 ¡CAMPAÑA COMPLETADA!' : '¡SECTOR COMPLETADO!';
+          $('finEstrellas').textContent = estrellasTexto(est);
+          if (r.nuevoDesbloqueo) toast('🔓 Desbloqueaste el sector ' + (J.campana + 1) + ': ' + GS.Sectores.get(J.campana + 1).nombre, 4000);
+          if (J.campana < GS.Sectores.total) {
+            $('btnOtraVez').textContent = 'Siguiente sector ▶';
+            $('btnOtraVez').dataset.accion = 'siguiente';
+            extra.textContent = 'Repetir ' + sec.nombre;
+            extra.dataset.accion = 'repetir';
+            extra.classList.remove('oculto');
+          } else {
+            $('btnOtraVez').textContent = '♾️ Jugar Infinito';
+            $('btnOtraVez').dataset.accion = 'infinito';
+            extra.textContent = 'Repetir el sector final';
+            extra.dataset.accion = 'repetir';
+            extra.classList.remove('oculto');
+          }
+        } else {
+          $('txtFinTitulo').textContent = 'MISIÓN FALLIDA';
+          $('btnOtraVez').textContent = 'Reintentar ' + sec.nombre;
+          $('btnOtraVez').dataset.accion = 'repetir';
+        }
+      } else {
+        const puesto = GS.Progreso.agregarRecord(tipo, nombre(), J.puntos);
+        $('txtFinTitulo').textContent = puesto === 1 ? '¡NUEVO RÉCORD!' : 'FIN DEL JUEGO';
+        if (puesto) cont.appendChild(fila('Tu top 10', 'Puesto #' + puesto));
+        $('btnOtraVez').textContent = 'Jugar otra vez';
+        $('btnOtraVez').dataset.accion = 'repetir';
+        if (GS.Progreso.global.activo() && J.puntos > 0) {
+          const nota = document.createElement('p');
+          nota.className = 'nota';
+          nota.textContent = '🌎 Enviando tu puntaje a la tabla mundial…';
+          cont.appendChild(nota);
+          GS.Progreso.global.enviar(tipo, nombre(), J.puntos).then((ok) => { nota.textContent = ok ? '🌎 ¡Puntaje enviado a la tabla mundial!' : '🌎 No se pudo enviar a la tabla mundial.'; });
+        }
+      }
+      mostrarRecord();
     } else {
       clearInterval(Sala.timerEstado);
       enviarEstado(true);
       setTimeout(() => enviarEstado(true), 1000);
       setTimeout(() => enviarEstado(true), 2500);
-      $('txtFinTitulo').textContent = 'RESULTADOS';
+      $('txtFinTitulo').textContent = Sala.coop ? 'MISIÓN EN EQUIPO' : 'RESULTADOS';
       renderRanking();
-      $('btnOtraVez').textContent = R.conectado ? 'Volver a la sala' : 'Multijugador';
+      $('btnOtraVez').dataset.accion = R.conectado && R.esHost ? 'revancha' : 'sala';
+      $('btnOtraVez').textContent = !R.conectado ? 'Multijugador' : R.esHost ? '🔁 Revancha' : 'Volver a la sala';
+      if (R.conectado && R.esHost) {
+        extra.textContent = 'Volver a la sala';
+        extra.dataset.accion = 'sala';
+        extra.classList.remove('oculto');
+      }
     }
     mostrar('pFin');
   }
@@ -382,18 +461,28 @@
     cont.innerHTML = '';
     const lista = ordenarEstados();
     const medallas = ['🥇', '🥈', '🥉', '4°'];
-    if (lista.length) {
+    if (Sala.coop) {
+      const total = lista.reduce((a, j) => a + j.puntos, 0);
+      const logrado = total >= Sala.meta;
+      const t = document.createElement('p');
+      t.className = 'ganador';
+      t.textContent = logrado ? '🤝 ¡MISIÓN CUMPLIDA!' : 'Casi… les faltaron ' + (Sala.meta - total).toLocaleString('es-CO') + ' puntos';
+      cont.appendChild(t);
+      cont.appendChild(fila('Puntos del equipo', total.toLocaleString('es-CO') + ' / ' + Sala.meta.toLocaleString('es-CO'), true));
+      if (logrado && !Sala.logroCoop) { Sala.logroCoop = true; GS.Progreso.evento('metaCoop'); }
+    } else if (lista.length) {
       const yoPrimero = lista[0].id === R.miId;
       const t = document.createElement('p');
       t.className = 'ganador';
       t.textContent = yoPrimero ? '¡GANASTE LA PARTIDA!' : 'Ganó ' + lista[0].nombre;
       cont.appendChild(t);
+      if (yoPrimero && lista.length > 1 && !Sala.logroVictoria && !lista.some((j) => !j.fin)) { Sala.logroVictoria = true; GS.Progreso.evento('victoriaOnline'); }
     }
     lista.forEach((j, i) => {
       const d = document.createElement('div');
       d.className = 'fila-ranking' + (j.id === R.miId ? ' yo' : '');
       const a = document.createElement('span');
-      a.textContent = (medallas[i] || i + 1 + '°') + '  ' + j.nombre + (j.id === R.miId ? ' (tú)' : '');
+      a.textContent = (Sala.coop ? (i === 0 ? '⭐ ' : '🛸 ') : (medallas[i] || i + 1 + '°') + '  ') + j.nombre + (j.id === R.miId ? ' (tú)' : '') + (Sala.coop && i === 0 ? ' · MVP' : '');
       const b = document.createElement('b');
       b.textContent = j.puntos.toLocaleString('es-CO');
       d.append(a, b);
@@ -410,6 +499,11 @@
     const cont = $('marcador');
     cont.innerHTML = '';
     if (J.modo !== 'online' && document.body.dataset.partida !== 'online') return;
+    if (Sala.coop) {
+      const total = Object.keys(Sala.estados).reduce((a, id) => a + (Sala.estados[id].puntos || 0), 0);
+      $('txtEquipo').textContent = '🤝 EQUIPO ' + total.toLocaleString('es-CO') + ' / ' + Sala.meta.toLocaleString('es-CO');
+      $('barraEquipo').style.width = Math.min(100, Math.round((total / Math.max(1, Sala.meta)) * 100)) + '%';
+    }
     ordenarEstados().forEach((j, i) => {
       const d = document.createElement('div');
       d.className = 'fila-marcador' + (j.id === R.miId ? ' yo' : '') + (j.vivo ? '' : ' fuera');
@@ -433,7 +527,7 @@
   }
 
   function revisarTodosEliminados() {
-    if (J.modo !== 'online' || J.estado !== 'jugando' || J.vivo) return;
+    if (J.modo !== 'online' || J.estado !== 'jugando' || J.vivo || Sala.coop) return;
     const todos = Object.keys(Sala.estados).every((id) => !Sala.estados[id].vivo);
     if (todos) setTimeout(() => J.terminar('todos'), 1500);
   }
@@ -462,7 +556,7 @@
 
   function difundirLobby() {
     if (!R.esHost) return;
-    R.enviar({ t: 'lobby', tipo: Sala.tipo, jugadores: Sala.jugadores.map((j) => ({ id: j.id, nombre: j.nombre, host: j.host })), enPartida: Sala.enPartida });
+    R.enviar({ t: 'lobby', tipo: Sala.tipo, coop: Sala.coop, jugadores: Sala.jugadores.map((j) => ({ id: j.id, nombre: j.nombre, host: j.host })), enPartida: Sala.enPartida });
   }
 
   function entrarSala() {
@@ -491,6 +585,9 @@
       : 'Esperando a que el anfitrión empiece la partida…';
     $('btnCompartir').classList.toggle('oculto', typeof navigator.share !== 'function');
     $('txtModoSala').textContent = 'Modo: ' + NOMBRE_TIPO[Sala.tipo];
+    $('btnTipoPartida').textContent = Sala.coop ? '🤝 Cooperativo: sumen puntos juntos' : '⚔️ Competencia: gana el que más puntos haga';
+    $('btnTipoPartida').disabled = !R.esHost;
+    $('btnTipoPartida').classList.toggle('solo-lectura', !R.esHost);
     // Sala de Disparos AR en un celular que aún no activó cámara y sensores
     $('btnSensoresSala').classList.toggle('oculto', !(Sala.tipo === 'ar' && !S.preparado && !esPC()));
   }
@@ -512,7 +609,7 @@
     setCargando(true, 'Creando sala…');
     try {
       await R.crear();
-      Object.assign(Sala, { jugadores: [{ id: R.miId, nombre: nombre(), host: true }], hostId: R.miId, enPartida: false, estados: {}, partida: null, tipo: tipoElegido });
+      Object.assign(Sala, { jugadores: [{ id: R.miId, nombre: nombre(), host: true }], hostId: R.miId, enPartida: false, estados: {}, partida: null, tipo: tipoElegido, coop: false });
       clearInterval(Sala.timerLobby);
       Sala.timerLobby = setInterval(() => { if (R.esHost && !Sala.enPartida) difundirLobby(); }, 3000);
       entrarSala();
@@ -555,7 +652,7 @@
     A.iniciar();
     pedirPantallaCompleta();
     const msg = {
-      t: 'inicio', tipo: Sala.tipo, semilla: (Math.random() * 1e9) >>> 0, duracion: DURACION_ONLINE, partida: U.id(8),
+      t: 'inicio', tipo: Sala.tipo, coop: Sala.coop, semilla: (Math.random() * 1e9) >>> 0, duracion: DURACION_ONLINE, partida: U.id(8),
       jugadores: Sala.jugadores.map((j) => ({ id: j.id, nombre: j.nombre }))
     };
     // Se repite por si algún mensaje se pierde; los demás ignoran los repetidos.
@@ -574,11 +671,15 @@
     });
     if (!Sala.estados[R.miId]) Sala.estados[R.miId] = { nombre: nombre(), puntos: 0, vidas: J.CONFIG.vidasMax, vivo: true, fin: false };
     const tipo = msg.tipo === 'esquiva' ? 'esquiva' : 'ar';
+    Sala.coop = !!msg.coop;
+    Sala.meta = META_COOP_POR_JUGADOR * Math.max(1, Object.keys(Sala.estados).length);
+    Sala.logroCoop = false;
+    Sala.logroVictoria = false;
     J.modo = 'online';
     J.prepararTipo(tipo);
     prepararHUD('online');
     cuentaRegresiva(() => {
-      J.iniciar({ modo: 'online', tipo, semilla: msg.semilla >>> 0, duracion: U.clamp(msg.duracion | 0, 30, 600) });
+      J.iniciar({ modo: 'online', tipo, coop: Sala.coop, semilla: msg.semilla >>> 0, duracion: U.clamp(msg.duracion | 0, 30, 600) });
       clearInterval(Sala.timerEstado);
       Sala.timerEstado = setInterval(() => { if (J.estado === 'jugando') enviarEstado(); }, 700);
     });
@@ -641,6 +742,7 @@
         if (Sala.hostId && de !== Sala.hostId) return;
         Sala.hostId = de;
         Sala.tipo = msg.tipo === 'esquiva' ? 'esquiva' : 'ar';
+        Sala.coop = !!msg.coop;
         Sala.jugadores = msg.jugadores.slice(0, MAX_JUGADORES).map((j) => ({
           id: String(j && j.id).slice(0, 24), nombre: limpiarNombre(j && j.nombre), host: !!(j && j.host)
         }));
@@ -669,7 +771,16 @@
         break;
       }
       case 'ataque':
-        if (de && de !== R.miId && J.modo === 'online') J.recibirAtaque(limpiarNombre(msg.nombre), U.clamp(msg.n | 0, 1, 5));
+        if (de && de !== R.miId && J.modo === 'online' && !Sala.coop) J.recibirAtaque(limpiarNombre(msg.nombre), U.clamp(msg.n | 0, 1, 5));
+        break;
+      case 'ayuda':
+        if (de && de !== R.miId && J.modo === 'online' && Sala.coop && J.estado === 'jugando' && J.vivo) {
+          GS.Poderes.activar('escudo');
+          aviso('🛡️ ¡' + limpiarNombre(msg.nombre) + ' te mandó un escudo!', 'exito');
+        }
+        break;
+      case 'emoji':
+        if (de && de !== R.miId) mostrarReaccion(limpiarNombre(msg.nombre), U.clamp(msg.e | 0, 0, EMOJIS.length - 1));
         break;
       case 'adios':
       case '_salio':
@@ -695,16 +806,20 @@
     gat.lienzo = gat.boton = gat.tecla = false;
     actualizarGatillo();
     $('txtPausaNota').textContent = J.modo === 'online' ? 'La partida en línea sigue corriendo.' : '';
-    $('btnSonido').textContent = A.activo ? '🔊 Sonido: sí' : '🔇 Sonido: no';
+    if (J.modo === 'solo') GS.Musica.parar();
     mostrar('pPausa');
   }
   function reanudar() {
     mostrar(null);
     if (J.estado === 'pausa') J.estado = 'jugando';
+    GS.Musica.tocar();
   }
   function salirAlMenu() {
     if (J.modo === 'online') salirSala();
     clearInterval(ivCuenta);
+    GS.Tutorial.cancelar();
+    GS.Poderes.reiniciar();
+    GS.Musica.tocar('menu');
     J.estado = 'menu';
     J.entidades = [];
     soltarWakeLock();
@@ -807,13 +922,18 @@
 
   /* ---------------- Botones de las pantallas ---------------- */
   function enlazarBotones() {
-    const clic = (id, fn) => $(id).addEventListener('click', (ev) => { A.iniciar(); A.clic(); fn(ev); });
+    const clic = (id, fn) => $(id).addEventListener('click', (ev) => {
+      A.iniciar();
+      A.clic();
+      if (J.estado === 'menu') GS.Musica.tocar('menu');
+      fn(ev);
+    });
 
     clic('btnSolo', () => {
       guardar('gs_nombre', nombre());
       pedirPantallaCompleta();
-      if (tipoElegido === 'esquiva') empezarSolo();
-      else conSensores(empezarSolo);
+      if (tipoElegido === 'esquiva') abrirSectores();
+      else conSensores(abrirSectores);
     });
     clic('btnOnline', () => {
       guardar('gs_nombre', nombre());
@@ -832,6 +952,21 @@
     });
     clic('btnComo', () => mostrar('pComo'));
     clic('btnComoListo', () => mostrar('pInicio'));
+    clic('btnPracticar', () => {
+      const lanzar = () => { J.modo = 'solo'; J.prepararTipo(tipoElegido); prepararHUD('solo'); empezarTutorial(salirAlMenu); };
+      if (tipoElegido === 'esquiva') lanzar(); else conSensores(lanzar);
+    });
+    clic('btnPerfil', () => abrirPerfil('logros'));
+    clic('btnAjustes', () => { volverDesdeAjustes = 'pInicio'; abrirAjustes(); });
+    clic('btnAjustesPausa', () => { volverDesdeAjustes = 'pPausa'; abrirAjustes(); });
+    clic('btnAjustesListo', () => mostrar(volverDesdeAjustes));
+    clic('btnPerfilListo', () => mostrar('pInicio'));
+    clic('btnSectoresVolver', () => mostrar('pInicio'));
+    clic('btnSaltarTutorial', () => GS.Tutorial.saltar());
+    clic('btnTipoPartida', () => { if (!R.esHost) return; Sala.coop = !Sala.coop; difundirLobby(); renderSala(); });
+    document.querySelectorAll('[data-pestana]').forEach((b) => b.addEventListener('click', () => { A.clic(); abrirPerfil(b.dataset.pestana); }));
+    enlazarAjustes();
+    enlazarEmojis();
     clic('btnPermitir', activarSensores);
     clic('btnVolverPerm', () => { accionPendiente = null; mostrar('pInicio'); });
 
@@ -863,17 +998,25 @@
     clic('btnPausa', pausar);
     clic('btnContinuar', reanudar);
     clic('btnRecentrar', () => { S.recentrar(); reanudar(); toast('Mira centrada', 1200); });
-    clic('btnSonido', () => { const on = A.alternar(); $('btnSonido').textContent = on ? '🔊 Sonido: sí' : '🔇 Sonido: no'; });
     clic('btnPantalla', alternarPantallaCompleta);
     clic('btnPantallaPausa', alternarPantallaCompleta);
     clic('btnIphoneListo', () => mostrar(volverDesdeIphone));
     clic('btnSeguirVertical', () => { document.body.classList.add('permitir-vertical'); revisarOrientacion(); });
     clic('btnSalirJuego', salirAlMenu);
 
-    clic('btnOtraVez', () => {
-      if (J.modo === 'solo') { pedirPantallaCompleta(); empezarSolo(); }
-      else volverASala();
-    });
+    const accionFin = (accion) => {
+      if (accion === 'revancha') {
+        if (R.conectado && R.esHost) { Sala.enPartida = false; empezarComoHost(); } else volverASala();
+        return;
+      }
+      if (accion === 'sala') { volverASala(); return; }
+      pedirPantallaCompleta();
+      if (accion === 'siguiente') sectorElegido = Math.min(GS.Sectores.total, (J.campana || 0) + 1);
+      else if (accion === 'infinito') sectorElegido = null;
+      empezarSolo();
+    };
+    clic('btnOtraVez', () => accionFin($('btnOtraVez').dataset.accion || 'repetir'));
+    clic('btnFinExtra', () => accionFin($('btnFinExtra').dataset.accion || 'repetir'));
     clic('btnMenu', salirAlMenu);
   }
 
@@ -881,11 +1024,27 @@
     J.modo = 'solo';
     J.prepararTipo(tipoElegido);
     prepararHUD('solo');
-    cuentaRegresiva(() => J.iniciar({ modo: 'solo', tipo: tipoElegido, semilla: (Math.random() * 1e9) >>> 0 }));
+    // La primera vez de cada modo, primero el tutorial
+    if (!GS.Tutorial.hecho(tipoElegido)) { empezarTutorial(empezarSolo); return; }
+    const sec = sectorElegido ? GS.Sectores.get(sectorElegido) : null;
+    const pista = sec ? 'SECTOR ' + sec.id + ' · ' + sec.nombre : '♾️ MODO INFINITO';
+    cuentaRegresiva(() => J.iniciar({ modo: 'solo', tipo: tipoElegido, sector: sectorElegido, semilla: (Math.random() * 1e9) >>> 0 }), pista);
+  }
+
+  function empezarTutorial(despues) {
+    GS.Tutorial.alTerminar = () => {
+      GS.Tutorial.alTerminar = null;
+      J.estado = 'cuenta';
+      J.entidades = [];
+      GS.Poderes.reiniciar();
+      toast('✅ ¡Tutorial completado!', 2000);
+      despues();
+    };
+    cuentaRegresiva(() => { J.iniciar({ modo: 'solo', tipo: tipoElegido, tutorial: true }); $('hudOleada').textContent = '🎓 TUTORIAL'; }, '🎓 TUTORIAL');
   }
 
   function mostrarRecord() {
-    $('txtRecord').textContent = numero(leer(claveRecord(tipoElegido), '0')).toLocaleString('es-CO');
+    $('txtRecord').textContent = GS.Progreso.mejor(tipoElegido).toLocaleString('es-CO');
   }
 
   function elegirTipo(tipo) {
@@ -899,9 +1058,234 @@
     mostrarRecord();
   }
 
+  /* ---------------- Sectores (campaña) ---------------- */
+  function abrirSectores() {
+    const cont = $('listaSectores');
+    cont.innerHTML = '';
+    $('txtSectoresModo').textContent = NOMBRE_TIPO[tipoElegido] + ' · Dificultad ' + GS.Ajustes.dif().nombre;
+    GS.Sectores.lista.forEach((sec) => {
+      const p = GS.Progreso.sector(tipoElegido, sec.id);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tarjeta-sector' + (p.desbloqueado ? '' : ' bloqueada') + (p.completado ? ' completada' : '');
+      b.style.setProperty('--c', sec.tema.acento);
+      b.disabled = !p.desbloqueado;
+      const num = document.createElement('span'); num.className = 'ts-num'; num.textContent = p.desbloqueado ? 'SECTOR ' + sec.id : '🔒 SECTOR ' + sec.id;
+      const nom = document.createElement('strong'); nom.textContent = sec.nombre;
+      const lema = document.createElement('small'); lema.textContent = p.desbloqueado ? sec.lema : 'Completa el sector ' + (sec.id - 1) + ' para abrirlo';
+      const est = document.createElement('span'); est.className = 'ts-estrellas'; est.textContent = estrellasTexto(p.estrellas);
+      const mej = document.createElement('small'); mej.className = 'ts-mejor'; mej.textContent = p.mejor ? 'Mejor: ' + p.mejor.toLocaleString('es-CO') : (tipoElegido === 'esquiva' ? 'Sobrevive y vence al jefe' : '5 oleadas + jefe');
+      b.append(num, nom, lema, est, mej);
+      b.addEventListener('click', () => { A.iniciar(); A.clic(); sectorElegido = sec.id; empezarSolo(); });
+      cont.appendChild(b);
+    });
+    const inf = document.createElement('button');
+    inf.type = 'button';
+    inf.className = 'tarjeta-sector infinito';
+    const n1 = document.createElement('span'); n1.className = 'ts-num'; n1.textContent = 'SIN FIN';
+    const n2 = document.createElement('strong'); n2.textContent = '♾️ Infinito';
+    const n3 = document.createElement('small'); n3.textContent = 'Oleadas cada vez más difíciles. ¡Bate tu récord!';
+    const n4 = document.createElement('small'); n4.className = 'ts-mejor'; n4.textContent = 'Récord: ' + GS.Progreso.mejor(tipoElegido).toLocaleString('es-CO');
+    inf.append(n1, n2, n3, n4);
+    inf.addEventListener('click', () => { A.iniciar(); A.clic(); sectorElegido = null; empezarSolo(); });
+    cont.appendChild(inf);
+    mostrar('pSectores');
+  }
+
+  /* ---------------- Perfil: logros, récords y naves ---------------- */
+  let pestanaPerfil = 'logros';
+  function abrirPerfil(pestana) {
+    pestanaPerfil = pestana || pestanaPerfil;
+    document.querySelectorAll('[data-pestana]').forEach((b) => b.classList.toggle('activo', b.dataset.pestana === pestanaPerfil));
+    const cont = $('perfilContenido');
+    cont.innerHTML = '';
+    const P = GS.Progreso;
+    if (pestanaPerfil === 'logros') {
+      const hechos = P.LOGROS.filter((l) => P.logrado(l.id)).length;
+      $('txtPerfilResumen').textContent = '🏅 ' + hechos + ' de ' + P.LOGROS.length + ' logros';
+      const grid = document.createElement('div');
+      grid.className = 'grid-logros';
+      P.LOGROS.forEach((l) => {
+        const d = document.createElement('div');
+        d.className = 'logro' + (P.logrado(l.id) ? ' hecho' : '');
+        const i = document.createElement('span'); i.className = 'logro-ico'; i.textContent = P.logrado(l.id) ? l.icono : '🔒';
+        const t = document.createElement('strong'); t.textContent = l.nombre;
+        const x = document.createElement('small'); x.textContent = l.desc;
+        d.append(i, t, x);
+        grid.appendChild(d);
+      });
+      cont.appendChild(grid);
+    } else if (pestanaPerfil === 'records') {
+      $('txtPerfilResumen').textContent = '🏆 Top 10 del modo Infinito en este dispositivo';
+      const cols = document.createElement('div');
+      cols.className = 'cols-records';
+      ['ar', 'esquiva'].forEach((tipo) => {
+        const c = document.createElement('div');
+        c.className = 'col-record';
+        const h = document.createElement('h3'); h.textContent = NOMBRE_TIPO[tipo];
+        c.appendChild(h);
+        const lista = document.createElement('ol');
+        const top = P.top(tipo);
+        if (!top.length) { const li = document.createElement('li'); li.className = 'vacio'; li.textContent = 'Todavía no hay récords'; lista.appendChild(li); }
+        top.forEach((r) => { const li = document.createElement('li'); const a = document.createElement('span'); a.textContent = r.n; const b = document.createElement('b'); b.textContent = r.p.toLocaleString('es-CO'); li.append(a, b); lista.appendChild(li); });
+        c.appendChild(lista);
+        if (P.global.activo()) {
+          const h2 = document.createElement('h4'); h2.textContent = '🌎 Mundial';
+          const lg = document.createElement('ol'); lg.className = 'mundial';
+          const cargando = document.createElement('li'); cargando.className = 'vacio'; cargando.textContent = 'Cargando…'; lg.appendChild(cargando);
+          c.append(h2, lg);
+          P.global.leer(tipo).then((filas) => {
+            lg.innerHTML = '';
+            if (!filas || !filas.length) { const li = document.createElement('li'); li.className = 'vacio'; li.textContent = filas ? 'Sé el primero 🚀' : 'Sin conexión'; lg.appendChild(li); return; }
+            filas.forEach((r) => { const li = document.createElement('li'); const a = document.createElement('span'); a.textContent = r.n; const b = document.createElement('b'); b.textContent = r.p.toLocaleString('es-CO'); li.append(a, b); lg.appendChild(li); });
+          });
+        }
+        cols.appendChild(c);
+      });
+      cont.appendChild(cols);
+      if (!P.global.activo()) {
+        const n = document.createElement('p'); n.className = 'nota';
+        n.textContent = GS.MODO_PRUEBA ? 'La tabla mundial funciona en la versión publicada (ver README).' : 'Tabla mundial: actívala con Supabase en js/config.js (ver README).';
+        cont.appendChild(n);
+      }
+    } else {
+      $('txtPerfilResumen').textContent = '🚀 Hangar: elige el color de tu nave y de tu láser';
+      const grid = document.createElement('div');
+      grid.className = 'grid-naves';
+      P.NAVES.forEach((n) => {
+        const ok = P.naveDisponible(n.id);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'nave-carta' + (ok ? '' : ' bloqueada') + (P.nave().id === n.id ? ' activo' : '');
+        b.disabled = !ok;
+        const muestra = document.createElement('span');
+        muestra.className = 'nave-muestra';
+        const css = (c) => 'rgb(' + c.map((v) => Math.round(v * 255)).join(',') + ')';
+        muestra.style.background = 'linear-gradient(135deg,' + css(n.colores.alas) + ' 0 45%,' + css(n.colores.casco) + ' 45% 70%,' + css(n.colores.franja) + ' 70%)';
+        muestra.style.boxShadow = '0 0 14px rgb(' + n.laser + ')';
+        const t = document.createElement('strong'); t.textContent = n.nombre;
+        const req = n.requiere ? P.LOGROS.find((l) => l.id === n.requiere) : null;
+        const x = document.createElement('small'); x.textContent = ok ? (P.nave().id === n.id ? '✔ En uso' : 'Toca para usar') : '🔒 Logro: ' + (req ? req.nombre : '');
+        b.append(muestra, t, x);
+        b.addEventListener('click', () => { A.clic(); P.elegirNave(n.id); abrirPerfil('naves'); });
+        grid.appendChild(b);
+      });
+      cont.appendChild(grid);
+    }
+    if (pantalla !== 'pPerfil') mostrar('pPerfil');
+  }
+
+  /* ---------------- Ajustes ---------------- */
+  function abrirAjustes() {
+    const Aj = GS.Ajustes;
+    document.querySelectorAll('[data-ajuste]').forEach((g) => {
+      const k = g.dataset.ajuste;
+      const v = k === 'sonido' ? A.activo : Aj.get(k);
+      g.querySelectorAll('button[data-valor]').forEach((b) => b.classList.toggle('activo', String(v) === b.dataset.valor));
+    });
+    $('rngSensibilidad').value = Aj.get('sensibilidad');
+    $('txtSensibilidad').textContent = Math.round(Aj.get('sensibilidad') * 100) + '%';
+    const enJuego = volverDesdeAjustes === 'pPausa';
+    $('btnRepetirTutorial').classList.toggle('oculto', enJuego);
+    $('notaDificultad').textContent = enJuego ? 'La dificultad se aplica desde la próxima partida.' : 'En línea todos juegan en Normal para que sea justo.';
+    mostrar('pAjustes');
+  }
+
+  function enlazarAjustes() {
+    const Aj = GS.Ajustes;
+    document.querySelectorAll('[data-ajuste]').forEach((g) => {
+      const k = g.dataset.ajuste;
+      g.querySelectorAll('button[data-valor]').forEach((b) => b.addEventListener('click', () => {
+        A.iniciar();
+        let v = b.dataset.valor;
+        if (v === 'true' || v === 'false') v = v === 'true';
+        if (k === 'sonido') { if (A.activo !== v) A.alternar(); }
+        else Aj.set(k, v);
+        A.clic();
+        abrirAjustes();
+      }));
+    });
+    $('rngSensibilidad').addEventListener('input', (ev) => {
+      const v = U.clamp(parseFloat(ev.target.value) || 1, 0.5, 1.6);
+      Aj.set('sensibilidad', v);
+      $('txtSensibilidad').textContent = Math.round(v * 100) + '%';
+    });
+    $('btnRepetirTutorial').addEventListener('click', () => {
+      A.clic();
+      GS.Tutorial.olvidar();
+      toast('🎓 El tutorial volverá a salir en tu próxima partida.', 2600);
+    });
+    Aj.alCambiar((k, v) => {
+      if (k === 'zurdo') document.body.classList.toggle('zurdo', !!v);
+      if (k === 'calidad') { GS.Ajustes._autoBaja = false; J.redimensionar(); }
+      if (k === 'musica') { if (v) GS.Musica.tocar(J.estado === 'jugando' ? undefined : 'menu'); else GS.Musica.parar(); }
+    });
+    document.body.classList.toggle('zurdo', !!Aj.get('zurdo'));
+  }
+
+  /* ---------------- Reacciones (emojis en línea) ---------------- */
+  const EMOJIS = ['🔥', '😂', '😱', '👏'];
+  let ultimoEmoji = 0;
+  function mostrarReaccion(quien, i) {
+    const cont = $('reacciones');
+    if (cont.children.length > 6) cont.firstChild.remove();
+    const d = document.createElement('div');
+    d.className = 'reaccion';
+    d.style.left = (12 + Math.random() * 70) + '%';
+    const e = document.createElement('span'); e.textContent = EMOJIS[i];
+    const n = document.createElement('small'); n.textContent = quien;
+    d.append(e, n);
+    cont.appendChild(d);
+    setTimeout(() => d.remove(), 2600);
+  }
+  function enlazarEmojis() {
+    const cont = $('barraEmojis');
+    EMOJIS.forEach((em, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = em;
+      b.setAttribute('aria-label', 'Reacción ' + em);
+      const enviar = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const ahora = performance.now();
+        if (ahora - ultimoEmoji < 1200 || !R.conectado) return;
+        ultimoEmoji = ahora;
+        R.enviar({ t: 'emoji', nombre: nombre(), e: i });
+        mostrarReaccion('Tú', i);
+      };
+      b.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+      b.addEventListener('click', enviar);
+      cont.appendChild(b);
+    });
+  }
+
+  /* ---------------- Logros ---------------- */
+  GS.Progreso.alLograr((l) => {
+    A.logro();
+    const naves = GS.Progreso.NAVES.filter((n) => n.requiere === l.id);
+    const caja = $('logroToast');
+    $('logroIcono').textContent = l.icono;
+    $('logroNombre').textContent = l.nombre;
+    $('logroExtra').textContent = naves.length ? '🚀 Nave desbloqueada: ' + naves[0].nombre : l.desc;
+    caja.classList.remove('oculto', 'entra');
+    void caja.offsetWidth;
+    caja.classList.add('entra');
+    clearTimeout(caja._t);
+    caja._t = setTimeout(() => caja.classList.add('oculto'), 3600);
+  });
+
+  /** Pasa los récords de la versión 1 a la tabla nueva. */
+  function migrarRecords() {
+    [['ar', 'gs_record'], ['esquiva', 'gs_record_esquiva']].forEach(([tipo, clave]) => {
+      const v = numero(leer(clave, '0'));
+      if (v > 0 && GS.Progreso.mejor(tipo) < v) GS.Progreso.agregarRecord(tipo, limpiarNombre(leer('gs_nombre', 'Piloto')), v);
+      if (v > 0) { try { localStorage.removeItem(clave); } catch (e) { /* nada */ } }
+    });
+  }
+
   /* ---------------- Inicio ---------------- */
   UI.iniciar = function () {
-    if (esAppInstalada()) document.body.classList.add('app-instalada');
     document.addEventListener('fullscreenchange', actualizarBotonesPantalla);
     document.addEventListener('webkitfullscreenchange', actualizarBotonesPantalla);
     if (mqVertical) {
@@ -914,9 +1298,16 @@
     S.modo = esPC() ? 'mouse' : 'tactil';
     document.body.dataset.modo = S.modo;
     if (GS.MODO_PRUEBA) document.body.classList.add('modo-prueba');
+    migrarRecords();
     enlazarControles();
     enlazarBotones();
     renderVidas();
+    mostrarRecord();
+    // La música se pausa si cambias de app o de pestaña
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) GS.Musica.parar();
+      else if (pantalla !== 'pPausa') GS.Musica.tocar();
+    });
     // Enlace compartido con código de sala: ...index.html#ABCD
     const m = /^#([A-Za-z0-9]{4})$/.exec(location.hash || '');
     if (m) {

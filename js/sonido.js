@@ -62,6 +62,7 @@
 
   GS.Sonido = {
     iniciar,
+    contexto: () => ctx,
     get activo() { return activo; },
     alternar() {
       activo = !activo;
@@ -89,6 +90,12 @@
     clic() { tono('sine', 700, 900, 0.05, 0.08); },
     impulso() { ruido(0.35, 0.3, 600, 3000, 0, 'bandpass'); tono('sawtooth', 220, 880, 0.22, 0.08); },
     cristal() { tono('triangle', 1320, 1320, 0.08, 0.12); tono('triangle', 1760, 1760, 0.12, 0.1, 0.06); },
+    poder() { [660, 880, 1320].forEach((f, i) => tono('triangle', f, f * 1.01, 0.12, 0.13, i * 0.06)); },
+    escudo() { tono('sine', 300, 1200, 0.25, 0.15); ruido(0.2, 0.15, 3000, 800, 0, 'highpass'); },
+    teleport() { tono('sine', 1800, 200, 0.18, 0.1); },
+    logro() { [784, 988, 1175, 1568].forEach((f, i) => tono('triangle', f, f, 0.18, 0.13, i * 0.08)); },
+    anillo() { tono('sine', 990, 1980, 0.15, 0.12); tono('triangle', 1480, 1480, 0.1, 0.08, 0.05); },
+    laser() { tono('sawtooth', 120, 90, 0.4, 0.06); },
     porPoco() { ruido(0.25, 0.25, 2000, 400, 0, 'bandpass'); tono('triangle', 700, 1400, 0.12, 0.12, 0.05); }
   };
 })(window.GS);

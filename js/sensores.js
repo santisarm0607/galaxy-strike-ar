@@ -141,14 +141,16 @@
   /** PC: la posición del mouse decide hacia dónde miras. */
   S.mouse = function (x, y, w, h) {
     if (S.modo !== 'mouse') return;
-    yawObj = -(x / w - 0.5) * 2 * 95 * DEG;
-    pitchObj = -(y / h - 0.5) * 2 * 40 * DEG;
+    const k = GS.Ajustes ? GS.Ajustes.get('sensibilidad') || 1 : 1;
+    yawObj = U.clamp(-(x / w - 0.5) * 2 * 95 * k, -110, 110) * DEG;
+    pitchObj = U.clamp(-(y / h - 0.5) * 2 * 40 * k, -55, 55) * DEG;
   };
 
   /** Celular sin giroscopio: arrastrar el dedo gira la vista. */
   S.arrastrar = function (dx, dy) {
-    yawObj -= dx * 0.3 * DEG;
-    pitchObj = U.clamp(pitchObj - dy * 0.26 * DEG, -55 * DEG, 55 * DEG);
+    const k = GS.Ajustes ? GS.Ajustes.get('sensibilidad') || 1 : 1;
+    yawObj -= dx * 0.3 * k * DEG;
+    pitchObj = U.clamp(pitchObj - dy * 0.26 * k * DEG, -55 * DEG, 55 * DEG);
   };
 
   S.tecla = function (lado, presionada) {
