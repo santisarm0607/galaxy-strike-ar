@@ -6,8 +6,16 @@
   <meta name="theme-color" content="#05060f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="description" content="Juego de disparos en realidad aumentada: tu celular es el blaster.">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Galaxy Strike">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="description" content="Juego de aliens en 3D: dispárales en realidad aumentada o esquívalos a toda velocidad.">
   <title>Galaxy Strike AR</title>
+  <!-- PWA: para instalarlo como app (iPhone: Compartir → Agregar a pantalla de inicio) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="iconos/icono-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="iconos/icono-192.png">
+  <!-- /PWA -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
@@ -20,6 +28,17 @@
   <canvas id="capa3d"></canvas>
   <canvas id="lienzo"></canvas>
   <div id="sondaSegura" aria-hidden="true"></div>
+
+  <!-- Botón para agrandar la pantalla (en los menús) -->
+  <button id="btnPantalla" class="btn-redondo btn-pantalla" aria-label="Pantalla completa" title="Pantalla completa">⛶</button>
+
+  <!-- Aviso: el juego se juega con el celular acostado -->
+  <div id="girar" aria-live="polite">
+    <div class="girar-cel"><span></span></div>
+    <b>Gira tu celular</b>
+    <p>Galaxy Strike se juega en horizontal.</p>
+    <button class="btn btn-texto" id="btnSeguirVertical">Seguir en vertical</button>
+  </div>
 
   <!-- ================= HUD (durante la partida) ================= -->
   <div id="hud" class="oculto">
@@ -62,6 +81,7 @@
   <!-- ================= Pantallas ================= -->
   <section class="pantalla activa" id="pInicio">
     <div class="panel panel-inicio">
+      <div class="col col-a">
       <div class="logo">
         <span class="logo-galaxy">GALAXY</span>
         <span class="logo-strike">STRIKE</span>
@@ -73,6 +93,8 @@
         <button class="opcion-modo" id="modoEsquiva">👾 Esquiva marcianos</button>
       </div>
       <p class="pista-modo" id="txtModoPista"></p>
+      </div>
+      <div class="col col-b">
       <label class="campo">
         <span>Nombre de piloto</span>
         <input id="inpNombre" maxlength="14" autocomplete="off" spellcheck="false">
@@ -83,6 +105,7 @@
       <div class="pie">
         <span>Récord: <b id="txtRecord">0</b></span>
         <span class="firma">por SantiSarm</span>
+      </div>
       </div>
     </div>
   </section>
@@ -145,7 +168,8 @@
   </section>
 
   <section class="pantalla" id="pSala">
-    <div class="panel">
+    <div class="panel panel-sala">
+      <div class="col col-a">
       <div class="etiqueta">Código de la sala</div>
       <div class="codigo-grande" id="txtCodigo">----</div>
       <div class="fila-botones">
@@ -153,11 +177,14 @@
         <button class="btn btn-mini" id="btnCompartir">Compartir</button>
       </div>
       <div class="modo-sala" id="txtModoSala"></div>
+      <p class="nota" id="txtSalaEstado"></p>
+      </div>
+      <div class="col col-b">
       <ul class="lista-jugadores" id="listaJugadores"></ul>
       <button class="btn btn-secundario oculto" id="btnSensoresSala">📷 Activar cámara y sensores</button>
-      <p class="nota" id="txtSalaEstado"></p>
       <button class="btn btn-primario" id="btnEmpezar">¡Empezar partida!</button>
       <button class="btn btn-texto" id="btnSalirSala">Salir de la sala</button>
+      </div>
     </div>
   </section>
 
@@ -175,6 +202,7 @@
       <button class="btn btn-primario" id="btnContinuar">Continuar</button>
       <button class="btn btn-secundario" id="btnRecentrar">🎯 Centrar la mira aquí</button>
       <button class="btn btn-secundario" id="btnSonido">🔊 Sonido: sí</button>
+      <button class="btn btn-secundario" id="btnPantallaPausa">⛶ Pantalla completa</button>
       <button class="btn btn-texto" id="btnSalirJuego">Salir al menú</button>
     </div>
   </section>
@@ -185,6 +213,20 @@
       <div id="finContenido"></div>
       <button class="btn btn-primario" id="btnOtraVez">Jugar otra vez</button>
       <button class="btn btn-texto" id="btnMenu">Menú principal</button>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pIphone">
+    <div class="panel panel-iphone">
+      <h2>Pantalla completa en iPhone</h2>
+      <p class="texto">Safari en iPhone no deja poner páginas en pantalla completa. Instálalo como app y se abre sin barras:</p>
+      <ol class="pasos-iphone">
+        <li><span class="num">1</span><div>Toca el botón <b>Compartir</b> <span class="ico-compartir" aria-hidden="true"></span> de Safari.</div></li>
+        <li><span class="num">2</span><div>Elige <b>«Agregar a pantalla de inicio»</b> (deja activado <b>«Abrir como app web»</b>).</div></li>
+        <li><span class="num">3</span><div>Abre <b>Galaxy Strike</b> desde su ícono y <b>gira el celular</b>.</div></li>
+      </ol>
+      <p class="nota">Activa también la rotación: desliza desde la esquina de arriba a la derecha y quita el candado 🔒 de orientación.</p>
+      <button class="btn btn-primario" id="btnIphoneListo">Entendido</button>
     </div>
   </section>
 

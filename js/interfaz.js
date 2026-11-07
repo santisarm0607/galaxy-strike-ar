@@ -32,6 +32,8 @@
   function mostrar(id) {
     document.querySelectorAll('.pantalla').forEach((p) => p.classList.toggle('activa', p.id === id));
     pantalla = id;
+    // El botón ⛶ de la esquina solo se ve en los menús
+    document.body.classList.toggle('sin-boton-pantalla', !id || id === 'pCuenta');
   }
   UI.mostrar = mostrar;
 
@@ -68,16 +70,91 @@
   function leer(clave, def) { try { const v = localStorage.getItem(clave); return v == null ? def : v; } catch (e) { return def; } }
   function guardar(clave, v) { try { localStorage.setItem(clave, v); } catch (e) { /* nada */ } }
 
-  function pedirPantallaCompleta() {
-    if (!(window.matchMedia && matchMedia('(pointer: coarse)').matches)) return;
+  /* ---------------- Pantalla completa y orientación ----------------
+     - Android y PC: API de pantalla completa (+ bloqueo horizontal en Android).
+     - iPhone: Safari no la tiene; la mejor opción es instalarlo como app
+       (Compartir → Agregar a pantalla de inicio). */
+  const esTactil = () => !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  const esIOS = () => /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const esAppInstalada = () => navigator.standalone === true ||
+    (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches));
+  const enPantallaCompleta = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  function puedePantallaCompleta() {
+    const el = document.documentElement;
+    const hay = typeof el.requestFullscreen === 'function' || typeof el.webkitRequestFullscreen === 'function';
+    const permitido = document.fullscreenEnabled !== false || document.webkitFullscreenEnabled === true;
+    return hay && permitido;
+  }
+
+  function bloquearHorizontal() {
+    if (!esTactil()) return;
+    try {
+      const o = screen.orientation;
+      if (o && typeof o.lock === 'function') { const r = o.lock('landscape'); if (r && r.catch) r.catch(() => {}); }
+    } catch (e) { /* no soportado (iPhone) */ }
+  }
+
+  function entrarPantallaCompleta() {
     const el = document.documentElement;
     try {
-      const f = el.requestFullscreen || el.webkitRequestFullscreen;
-      if (f && !document.fullscreenElement) {
-        const r = f.call(el, { navigationUI: 'hide' });
-        if (r && r.catch) r.catch(() => {});
-      }
-    } catch (e) { /* no soportado */ }
+      const r = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen();
+      if (r && r.then) r.then(bloquearHorizontal, () => {});
+      else setTimeout(bloquearHorizontal, 300);
+    } catch (e) { /* rechazado */ }
+  }
+
+  function salirPantallaCompleta() {
+    try {
+      const f = document.exitFullscreen || document.webkitExitFullscreen;
+      const r = f && f.call(document);
+      if (r && r.catch) r.catch(() => {});
+    } catch (e) { /* nada */ }
+  }
+
+  let volverDesdeIphone = 'pInicio';
+  /** Botón ⛶: agranda o achica la pantalla. */
+  function alternarPantallaCompleta() {
+    if (enPantallaCompleta()) { salirPantallaCompleta(); return; }
+    if (puedePantallaCompleta()) { entrarPantallaCompleta(); return; }
+    if (esIOS() && GS.MODO_PRUEBA) {
+      toast('En iPhone, la pantalla completa se logra instalando el juego publicado como app (el botón ⛶ te explica cómo allá).', 4500);
+      return;
+    }
+    if (esIOS() && !esAppInstalada()) {
+      volverDesdeIphone = pantalla || 'pInicio';
+      mostrar('pIphone');
+      return;
+    }
+    toast(esTactil() ? 'Este navegador no permite pantalla completa aquí.' : 'Este navegador no permite pantalla completa aquí. Prueba con la tecla F11.', 3500);
+  }
+
+  /** Al empezar a jugar en un celular, agranda la pantalla sola (si se puede). */
+  function pedirPantallaCompleta() {
+    if (!esTactil() || enPantallaCompleta() || !puedePantallaCompleta()) return;
+    entrarPantallaCompleta();
+  }
+
+  function actualizarBotonesPantalla() {
+    const activa = enPantallaCompleta();
+    $('btnPantalla').classList.toggle('activa', activa);
+    $('btnPantalla').title = activa ? 'Salir de pantalla completa' : 'Pantalla completa';
+    $('btnPantallaPausa').textContent = activa ? '⛶ Salir de pantalla completa' : '⛶ Pantalla completa';
+  }
+
+  /* El juego es horizontal: en un celular vertical sale el aviso de girar. */
+  const mqVertical = window.matchMedia ? matchMedia('(pointer: coarse) and (orientation: portrait)') : null;
+  const bloqueadoVertical = () => !!(mqVertical && mqVertical.matches && !document.body.classList.contains('permitir-vertical'));
+  let alQuedarHorizontal = null;
+  function cuandoHorizontal(fn) {
+    if (!bloqueadoVertical()) { fn(); return; }
+    alQuedarHorizontal = fn;
+  }
+  function revisarOrientacion() {
+    if (bloqueadoVertical()) {
+      if (J.estado === 'jugando' && J.modo === 'solo') pausar();
+      return;
+    }
+    if (alQuedarHorizontal) { const fn = alQuedarHorizontal; alQuedarHorizontal = null; setTimeout(fn, 250); }
   }
 
   async function pedirWakeLock() {
@@ -122,6 +199,14 @@
   function cuentaRegresiva(alTerminar) {
     clearInterval(ivCuenta);
     J.estado = 'cuenta';
+    // Si el celular está vertical, esperamos a que lo gire antes de contar
+    if (bloqueadoVertical()) {
+      $('hud').classList.add('oculto');
+      mostrar('pCuenta');
+      $('txtCuenta').textContent = '';
+      cuandoHorizontal(() => cuentaRegresiva(alTerminar));
+      return;
+    }
     $('hud').classList.add('oculto');
     mostrar('pCuenta');
     const el = $('txtCuenta');
@@ -779,6 +864,10 @@
     clic('btnContinuar', reanudar);
     clic('btnRecentrar', () => { S.recentrar(); reanudar(); toast('Mira centrada', 1200); });
     clic('btnSonido', () => { const on = A.alternar(); $('btnSonido').textContent = on ? '🔊 Sonido: sí' : '🔇 Sonido: no'; });
+    clic('btnPantalla', alternarPantallaCompleta);
+    clic('btnPantallaPausa', alternarPantallaCompleta);
+    clic('btnIphoneListo', () => mostrar(volverDesdeIphone));
+    clic('btnSeguirVertical', () => { document.body.classList.add('permitir-vertical'); revisarOrientacion(); });
     clic('btnSalirJuego', salirAlMenu);
 
     clic('btnOtraVez', () => {
@@ -812,6 +901,14 @@
 
   /* ---------------- Inicio ---------------- */
   UI.iniciar = function () {
+    if (esAppInstalada()) document.body.classList.add('app-instalada');
+    document.addEventListener('fullscreenchange', actualizarBotonesPantalla);
+    document.addEventListener('webkitfullscreenchange', actualizarBotonesPantalla);
+    if (mqVertical) {
+      if (mqVertical.addEventListener) mqVertical.addEventListener('change', revisarOrientacion);
+      else if (mqVertical.addListener) mqVertical.addListener(revisarOrientacion);
+    }
+    window.addEventListener('orientationchange', () => setTimeout(revisarOrientacion, 300));
     $('inpNombre').value = limpiarNombre(leer('gs_nombre', 'Piloto' + ((Math.random() * 90 + 10) | 0)));
     elegirTipo(leer('gs_tipo', esPC() ? 'esquiva' : 'ar'));
     S.modo = esPC() ? 'mouse' : 'tactil';

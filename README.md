@@ -56,6 +56,8 @@ En multijugador, el anfitrión elige el modo de la sala. En *Esquiva marcianos*,
 ```
 galaxy-strike-ar/
 ├── index.html          → pantallas y HUD
+├── manifest.webmanifest → datos para instalarlo como app (nombre, ícono, horizontal, pantalla completa)
+├── iconos/             → íconos de la app (iPhone y Android)
 ├── css/
 │   └── estilos.css     → todo el diseño
 └── js/
@@ -115,6 +117,42 @@ Los navegadores **solo dejan usar la cámara y el giroscopio en páginas con `ht
 - **Android:** usa Chrome. Acepta el permiso de la cámara.
 - **iPhone:** usa Safari. Te va a pedir permiso para "Movimiento y orientación": dale **Permitir**.
 - Sostén el celular con las dos manos y deja espacio a tu alrededor, porque vas a girar.
+
+---
+
+## ↔️ Horizontal y pantalla completa
+
+El juego está hecho para jugarse **en horizontal** (celular acostado):
+
+- Si el celular está vertical, sale el aviso **«Gira tu celular»**. Si de verdad quieres jugar vertical, toca «Seguir en vertical».
+- Los menús se acomodan en **dos columnas** cuando la pantalla es baja (celular acostado).
+- Se respetan las zonas del notch / isla dinámica y de la barra de inicio (`env(safe-area-inset-*)`), para que nada quede tapado.
+
+**Botón ⛶ (arriba a la derecha y en la pausa):**
+
+| Dispositivo | Qué hace |
+|---|---|
+| PC | Pantalla completa (o usa F11). |
+| Android (Chrome) | Pantalla completa y **bloquea el giro en horizontal**. Al empezar a jugar se pone en pantalla completa solo. |
+| iPhone (Safari) | Safari en iPhone **no permite** pantalla completa en páginas web ni bloquear el giro. El botón muestra cómo instalarlo como app (abajo). |
+| Ya instalado como app | El botón se esconde: ya está en pantalla completa. |
+
+---
+
+## 🍎 Cómo verlo mejor en iPhone
+
+La mejor forma es **instalarlo como app web**: se abre sin las barras de Safari, con su propio ícono y en horizontal ocupa toda la pantalla.
+
+1. Abre el enlace `https://...` del juego en **Safari**.
+2. Toca **Compartir** (el cuadrito con la flecha hacia arriba).
+3. Toca **«Agregar a pantalla de inicio»**. En iOS 26 deja activado **«Abrir como app web»** (viene activado por defecto).
+4. Abre **Galaxy Strike** desde el ícono nuevo y **gira el celular**.
+
+Consejos:
+- Si no gira la pantalla, quita el **bloqueo de orientación** 🔒 en el Centro de control (desliza desde la esquina de arriba a la derecha).
+- La cámara y el giroscopio también funcionan desde la app instalada. La primera vez te vuelve a pedir los permisos.
+- Si no se escucha el sonido, revisa que el iPhone no esté en silencio y sube el volumen.
+- Si cambias el código y no ves los cambios en la app instalada, ciérrala del todo y ábrela de nuevo.
 
 ---
 

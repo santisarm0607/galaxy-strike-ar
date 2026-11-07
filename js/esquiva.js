@@ -54,7 +54,8 @@
   let LX = CFG.limX, LY = CFG.limY, FE = 800, distCam = 8.5, seguir = 0.5, altCam = 1.5;
   function ajustarPantalla() {
     if (C.W >= C.H) {
-      LX = CFG.limX; LY = CFG.limY; FE = C.F; distCam = 8.5; seguir = 0.5; altCam = 1.5;
+      // En pantallas muy anchas (celular acostado) se abre el ángulo vertical para que la nave no se salga
+      LX = CFG.limX; LY = CFG.limY; FE = Math.min(C.F, (C.H / 2) / Math.tan(24 * Math.PI / 180)); distCam = 8.5; seguir = 0.5; altCam = 1.5;
     } else {
       LX = 4.2; LY = 3.6; FE = (C.W / 2) / Math.tan(32 * Math.PI / 180); distCam = 5.6; seguir = 0.65; altCam = 2.3;
     }

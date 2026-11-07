@@ -19,6 +19,7 @@
 
 * { box-sizing: border-box; }
 
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html, body {
   margin: 0;
   height: 100%;
@@ -31,6 +32,7 @@ html, body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 body { position: fixed; inset: 0; }
 
@@ -54,7 +56,7 @@ body.con-camara #camara { display: block; }
 .pantalla {
   position: fixed; inset: 0; z-index: 20;
   display: none; align-items: center; justify-content: center;
-  padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px));
   background: radial-gradient(ellipse at center, rgba(5, 6, 15, 0.25), rgba(5, 6, 15, 0.82));
   overflow-y: auto; touch-action: pan-y;
 }
@@ -343,4 +345,86 @@ body[data-modo="mouse"] #pistaTeclas { display: block; }
   .logo-strike { font-size: 40px; }
   .lema { margin: 6px 0 10px; }
   .btn { padding: 11px 16px; margin-top: 8px; }
+}
+
+
+/* =========================================================
+   Pantalla completa, celular acostado e iPhone
+   ========================================================= */
+.btn-pantalla {
+  position: fixed; z-index: 30; font-size: 18px; line-height: 1;
+  top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px));
+}
+.btn-pantalla.activa { border-color: var(--cian); box-shadow: 0 0 14px rgba(56, 248, 255, 0.5); }
+body.sin-boton-pantalla .btn-pantalla, body.app-instalada .btn-pantalla, body.app-instalada #btnPantallaPausa { display: none; }
+
+/* Aviso para girar el celular */
+#girar {
+  position: fixed; inset: 0; z-index: 60; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  padding: 24px; text-align: center; background: rgba(5, 6, 15, 0.95);
+}
+@media (pointer: coarse) and (orientation: portrait) {
+  body:not(.permitir-vertical) #girar { display: flex; }
+}
+.girar-cel {
+  width: 56px; height: 96px; border: 3px solid var(--cian); border-radius: 12px; position: relative;
+  box-shadow: 0 0 18px rgba(56, 248, 255, 0.4); animation: girarCel 2.2s ease-in-out infinite;
+}
+.girar-cel span { position: absolute; bottom: 7px; left: 50%; width: 16px; height: 3px; margin-left: -8px; border-radius: 2px; background: var(--cian); }
+@keyframes girarCel { 0%, 15% { transform: rotate(0); } 45%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+#girar b { font: 800 22px var(--titulo); color: var(--cian); margin-top: 22px; letter-spacing: 1px; }
+#girar p { color: var(--tenue); margin: 0 0 6px; }
+#girar .btn { width: auto; }
+
+/* Guía para iPhone */
+.pasos-iphone { list-style: none; padding: 0; margin: 14px 0 4px; display: grid; gap: 10px; text-align: left; }
+.pasos-iphone li { display: flex; gap: 12px; align-items: center; background: rgba(56, 248, 255, 0.06); border-radius: 12px; padding: 10px 12px; font-size: 14.5px; line-height: 1.35; }
+.pasos-iphone .num {
+  flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  font: 800 14px var(--titulo); color: #031018; background: linear-gradient(135deg, var(--verde), var(--cian));
+}
+.ico-compartir {
+  display: inline-block; width: 14px; height: 15px; vertical-align: -2px; margin: 0 2px;
+  border: 2px solid var(--cian); border-top: none; border-radius: 0 0 3px 3px; position: relative;
+}
+.ico-compartir::before { content: ''; position: absolute; left: 50%; top: -9px; width: 2px; height: 12px; margin-left: -1px; background: var(--cian); }
+.ico-compartir::after { content: ''; position: absolute; left: 50%; top: -10px; width: 6px; height: 6px; margin-left: -4px; border: solid var(--cian); border-width: 2px 0 0 2px; transform: rotate(45deg); }
+
+/* Celular acostado (pantalla baja): menús en dos columnas */
+@media (orientation: landscape) and (max-height: 520px) {
+  .pantalla { padding: calc(8px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) calc(14px + env(safe-area-inset-left, 0px)); }
+  .panel { width: min(760px, 100%); padding: 14px 20px 12px; border-radius: 18px; }
+  .panel-inicio, .panel-sala { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; align-items: center; }
+  .panel-inicio .col-a .logo { margin-top: 0; }
+  .logo-galaxy { font-size: 13px; letter-spacing: 8px; margin-right: -8px; }
+  .logo-strike { font-size: 42px; }
+  .logo-ar { font-size: 12px; top: -6px; right: 2%; }
+  .lema { margin: 6px 0 10px; font-size: 13px; }
+  .pista-modo { margin: 6px 2px 0; font-size: 12px; }
+  .opcion-modo { padding: 9px 4px; font-size: 13px; }
+  .campo span { margin-bottom: 4px; }
+  input { padding: 9px 12px; font-size: 16px; }
+  .btn { padding: 10px 14px; margin-top: 8px; font-size: 15px; }
+  .btn-texto { padding: 6px; }
+  .pie { margin-top: 8px; }
+  .panel h2 { font-size: 17px; margin-bottom: 10px; }
+  .texto { font-size: 13.5px; }
+  .separador { margin: 10px 0 8px; }
+  .codigo-grande { font-size: 42px; }
+  .lista-jugadores { margin-top: 0; gap: 6px; }
+  .lista-jugadores li { padding: 7px 12px; font-size: 14px; }
+  .pasos { grid-template-columns: repeat(4, 1fr); }
+  .paso small { font-size: 11.5px; }
+  #finContenido { grid-template-columns: 1fr 1fr; gap: 6px; }
+  #finContenido .stat { padding: 7px 12px; font-size: 14px; }
+  #finContenido .stat.destacado, #finContenido .ganador, #finContenido .nota { grid-column: 1 / -1; }
+  #finContenido .stat.destacado b { font-size: 20px; }
+  .permiso { padding: 8px 12px; margin-bottom: 6px; }
+  .pasos-iphone { grid-template-columns: repeat(3, 1fr); }
+  .pasos-iphone li { flex-direction: column; text-align: center; font-size: 13px; }
+  .cuenta-num { font-size: 84px; }
+  .cuenta p { margin-top: 60px; }
+  #toast { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+  #avisos { top: 22%; }
 }
