@@ -56,13 +56,13 @@
     pintarModoCam();
     $('btnCamListo').disabled = true;
     $('btnCamListo').textContent = 'Esperando…';
-    $('txtCamEstado').textContent = '📷 Pidiendo permiso para la cámara…';
+    $('txtCamEstado').textContent = 'Pidiendo permiso para la cámara…';
     mostrar('pCamara');
     CU.iniciar($('videoCuerpo')).then((ok) => {
       if (st.pantalla !== 'pCamara') return;
       if (!ok) {
-        $('txtCamEstado').textContent = '⚠️ ' + CU.error + ' Puedes reintentar o jugar con el control normal.';
-        $('btnCamListo').textContent = '🔄 Reintentar';
+        $('txtCamEstado').textContent = '' + CU.error + ' Puedes reintentar o jugar con el control normal.';
+        $('btnCamListo').textContent = 'Reintentar';
         $('btnCamListo').disabled = false;
         return;
       }
@@ -84,17 +84,17 @@
     $('camModoCuerpo').classList.toggle('activo', !manos);
     $('camModoManos').classList.toggle('activo', manos);
     const items = manos
-      ? [['✋', 'Mueve la mano', ': la nave la sigue (como un mouse en el aire).'],
-         ['🔫', 'Mano en pistola', ' y baja el pulgar: disparas al frente de la nave.'],
-         ['🖐️', 'Abre la mano', ': impulso.'],
-         ['💡', 'Siéntate a unos 50 cm', ', con luz de frente. Con la otra mano también puedes apuntar.']]
-      : [['🧍', 'Muévete', ' de lado o agáchate: la nave te sigue.'],
-         ['🔫', 'Mano en pistola', ' (índice estirado): apuntas. Baja el pulgar: disparas.'],
-         ['✋', 'Mano abierta', ': impulso.'],
-         ['💡', 'Aléjate 1–2 metros', ', con luz de frente, y ponte dentro de la silueta.']];
+      ? [['Mueve la mano', ': la nave la sigue (como un mouse en el aire).'],
+         ['Mano en pistola', ' y baja el pulgar: disparas al frente de la nave.'],
+         ['Abre la mano', ': impulso.'],
+         ['Siéntate a unos 50 cm', ', con luz de frente. Con la otra mano también puedes apuntar.']]
+      : [['Muévete', ' de lado o agáchate: la nave te sigue.'],
+         ['Mano en pistola', ' (índice estirado): apuntas. Baja el pulgar: disparas.'],
+         ['Mano abierta', ': impulso.'],
+         ['Aléjate 1–2 metros', ', con luz de frente, y ponte dentro de la silueta.']];
     const ul = $('listaCam');
     ul.innerHTML = '';
-    items.forEach(([ico, b, txt]) => { const li = document.createElement('li'); const bb = document.createElement('b'); bb.textContent = b; li.append(ico + ' ', bb, txt); ul.appendChild(li); });
+    items.forEach(([b, txt]) => { const li = document.createElement('li'); const bb = document.createElement('b'); bb.textContent = b; li.append(bb, txt); ul.appendChild(li); });
     pintarControl();
   }
 
@@ -116,7 +116,7 @@
     CU.alImpulso = () => { if (E.camara && J.estado === 'jugando') E.impulso(); };
     CU.alProgreso = (txt) => { if (st.pantalla === 'pCamara') $('txtCamEstado').textContent = txt; };
     CU.alLento = () => {
-      toast('🐢 Este equipo va lento con la cámara: vuelvo al control normal.', 4500);
+      toast('Este equipo va lento con la cámara: vuelvo al control normal.', 4500);
       elegirControl('normal');
     };
     st.control = leer('gs_control', 'normal') === 'camara' ? 'camara' : 'normal';

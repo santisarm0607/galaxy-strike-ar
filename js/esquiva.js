@@ -257,7 +257,7 @@
   E.recibirAtaque = function (nombre, n) {
     if (J.estado !== 'jugando' || !J.vivo) return;
     for (let i = 0; i < n * 2; i++) ataques.push(0.5 + i * 0.35);
-    J.emitir('aviso', '👾 ¡' + nombre + ' te mandó una estampida!', 'peligro');
+    J.emitir('aviso', '¡' + nombre + ' te mandó una estampida!', 'peligro');
     GS.Sonido.ataque();
   };
 
@@ -320,7 +320,7 @@
         obs.push({ tipo: 'dron', formacion: true, x, y, x0: x, y0: y, z: -CFG.distanciaAparicion, t: k * 0.3, fase: 0, extra: 0, radio: 0.85 });
       }
     }
-    J.emitir('aviso', '⚠️ ¡MURO DE MARCIANOS! Busca el hueco', 'peligro');
+    J.emitir('aviso', '¡MURO DE MARCIANOS! Busca el hueco', 'peligro');
     GS.Sonido.alerta();
   }
 
@@ -371,7 +371,7 @@
       vida: CFG.vidaJefeBase + CFG.vidaJefePorFase * fases }; // la vida solo importa con el control de cámara
     GS.Sonido.alerta();
     GS.Musica.tocar('jefe');
-    J.emitir('aviso', '⚠️ ¡' + def.nombre + '! Aguanta ' + dur + ' segundos', 'peligro');
+    J.emitir('aviso', '¡' + def.nombre + '! Aguanta ' + dur + ' segundos', 'peligro');
   }
 
   /** Roca que lanza el Rompe-rocas (se mueve con su propia velocidad, como los orbes). */
@@ -733,7 +733,7 @@
       GS.Sonido.explosion(true);
       // Sus disparos y láseres desaparecen con ella
       obs.forEach((e) => { if (e.tipo === 'orbe' || e.tipo === 'roca' || (e.tipo === 'laser' && e.extra === 6)) e.muerto = true; });
-      J.emitir('aviso', '💥 ' + j.def.muerte + ' +' + pts, 'exito');
+      J.emitir('aviso', '' + j.def.muerte + ' +' + pts, 'exito');
     } else {
       const quien = { nodriza: 'AL GUARDIÁN LUNAR', coloso: 'AL ROMPE-ROCAS', medusa: 'A LA REINA', emperador: 'A ZORP' }[j.def.id];
       J.emitir('aviso', '¡SOBREVIVISTE ' + quien + '! +' + pts, 'exito');
@@ -789,7 +789,7 @@
       J.flash = 0.35;
       J.flashColor = '56,248,255';
       GS.Sonido.escudo();
-      textos.push({ txt: '🛡️ ¡ESCUDO!', c: '#38f8ff', t: 0, vida: 0.9, x: nave.x, y: nave.y + 1 });
+      textos.push({ txt: '¡ESCUDO!', c: '#38f8ff', t: 0, vida: 0.9, x: nave.x, y: nave.y + 1 });
       explosion([e.x, e.y, Math.max(e.z, -1)], e.tipo, 16);
       return true;
     }
@@ -857,7 +857,7 @@
     const d = GS.Poderes.TIPOS[e.poder];
     explosion([e.x, e.y, 0], 'cristal', 18);
     GS.Poderes.activar(e.poder);
-    textos.push({ txt: d.icono + ' ' + d.nombre.toUpperCase(), c: d.css, t: 0, vida: 1.1, x: e.x, y: e.y + 1 });
+    textos.push({ txt: d.nombre.toUpperCase(), c: d.css, t: 0, vida: 1.1, x: e.x, y: e.y + 1 });
     if (J.tutorial) J.emitir('tutPoder');
   }
 
@@ -872,7 +872,7 @@
     if (cristales % CFG.cristalesPorVida === 0 && J.vidas < J.vidasMax) {
       J.vidas++;
       J.emitir('vidas');
-      J.emitir('aviso', '💎 ¡' + CFG.cristalesPorVida + ' cristales! +1 ❤', 'exito');
+      J.emitir('aviso', '¡' + CFG.cristalesPorVida + ' cristales! +1 ❤︎', 'exito');
     }
     if (J.tutorial) J.emitir('tutCristal');
   }
@@ -1090,10 +1090,10 @@
       if (dxy > rs + 2.5) continue;
       const p = proyectar([e.x, e.y, 0]);
       if (p.detras) continue;
-      const peligro = dxy < rs;
-      g.strokeStyle = peligro ? 'rgba(255,70,60,' + (0.35 + a * 0.6).toFixed(2) + ')' : 'rgba(255,255,255,' + (a * 0.35).toFixed(2) + ')';
-      g.lineWidth = peligro ? 3 : 1.5;
-      g.setLineDash(peligro ? [] : [6, 6]);
+      // Solo se avisa lo que te va a pegar (círculo rojo). Lo que pasa cerca no se marca: mareaba.
+      if (dxy >= rs) continue;
+      g.strokeStyle = 'rgba(255,70,60,' + (0.35 + a * 0.6).toFixed(2) + ')';
+      g.lineWidth = 3;
       g.beginPath();
       g.arc(p.x, p.y, e.radio * p.k, 0, TAU);
       g.stroke();
@@ -1165,8 +1165,7 @@
       if (e.tipo !== 'capsula') continue;
       const p = proyectar([e.x, e.y, e.z]);
       if (p.detras) continue;
-      g.font = Math.round(U.clamp(e.radio * p.k * 0.9, 10, 40)) + 'px sans-serif';
-      g.fillText(GS.Poderes.TIPOS[e.poder].icono, p.x, p.y);
+      J.dibujarIconoPoder(g, GS.Poderes.TIPOS[e.poder], p.x, p.y, e.radio * p.k);
     }
   }
 
@@ -1271,7 +1270,6 @@
         g.lineWidth = 2;
         g.beginPath(); g.arc(x, y, 12, 0, TAU); g.stroke();
         g.setLineDash([]);
-        if (m.abierta) { g.font = '20px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('✋', x, y); }
         g.restore();
         continue;
       }
@@ -1323,7 +1321,7 @@
       g.font = '800 15px Orbitron, sans-serif';
       g.textAlign = 'center';
       g.fillStyle = 'rgba(255,208,216,' + (0.6 + 0.4 * Math.sin(nave.t * 6)).toFixed(2) + ')';
-      g.fillText(CU.modo === 'manos' ? '✋ NO VEO TU MANO: MUÉSTRALA A LA CÁMARA' : '🧍 NO TE VEO: PÁRATE FRENTE A LA CÁMARA', W / 2, H * 0.62);
+      g.fillText(CU.modo === 'manos' ? 'NO VEO TU MANO: MUÉSTRALA A LA CÁMARA' : 'NO TE VEO: PÁRATE FRENTE A LA CÁMARA', W / 2, H * 0.62);
     }
   }
 
@@ -1352,7 +1350,7 @@
       g.font = '800 12px Orbitron, sans-serif';
       g.fillStyle = 'rgba(255,208,216,' + (0.6 + 0.4 * Math.sin(jefe.t * 8)).toFixed(2) + ')';
       const fases = jefe.fases > 1 ? ' · FASE ' + jefe.fase + '/' + jefe.fases : '';
-      g.fillText('⚠ ' + jefe.def.nombre + fases + ' · ' + Math.ceil(jefe.dur - jefe.t) + 's', W / 2, 100 + seguro.t);
+      g.fillText(jefe.def.nombre + fases + ' · ' + Math.ceil(jefe.dur - jefe.t) + 's', W / 2, 100 + seguro.t);
       if (E.camara) {
         // Vida de la nave nodriza (solo con cámara, porque solo así se le puede disparar)
         const max = CFG.vidaJefeBase + CFG.vidaJefePorFase * jefe.fases, bw = 180;

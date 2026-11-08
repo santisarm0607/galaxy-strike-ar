@@ -21,22 +21,22 @@
 
   /* ---------------- Logros ---------------- */
   P.LOGROS = [
-    { id: 'primer_alien', icono: '👾', nombre: 'Primer contacto', desc: 'Destruye tu primer alien.' },
-    { id: 'combo10', icono: '🔥', nombre: 'Imparable', desc: 'Haz un combo de 10.' },
-    { id: 'cazajefes', icono: '🛸', nombre: 'Cazajefes', desc: 'Derrota a un jefe en Disparos AR.' },
-    { id: 'sobreviviente', icono: '🛡️', nombre: 'Sobreviviente', desc: 'Sobrevive a un jefe en Esquiva marcianos.' },
-    { id: 'esquivador', icono: '💨', nombre: 'Por un pelo', desc: 'Logra 25 «¡por poco!» en una partida.' },
-    { id: 'meteorologo', icono: '☄️', nombre: 'Meteorólogo', desc: 'Esquiva 30 meteoros en Disparos AR (en total).' },
-    { id: 'coleccionista', icono: '💎', nombre: 'Coleccionista', desc: 'Junta 100 cristales (en total).' },
-    { id: 'intocable', icono: '✨', nombre: 'Intocable', desc: 'Aguanta 60 segundos sin recibir daño.' },
-    { id: 'poderoso', icono: '⚡', nombre: 'Poderoso', desc: 'Usa 10 poderes (en total).' },
-    { id: 'exterminador', icono: '💥', nombre: 'Exterminador', desc: 'Destruye 500 aliens (en total).' },
-    { id: 'perfecto', icono: '⭐', nombre: 'Perfecto', desc: 'Gana 3 estrellas en un sector.' },
-    { id: 'conquistador', icono: '👑', nombre: 'Conquistador', desc: 'Completa los 4 sectores de un modo.' },
-    { id: 'leyenda', icono: '🏆', nombre: 'Leyenda', desc: 'Haz 25.000 puntos en una partida.' },
-    { id: 'campeon', icono: '🥇', nombre: 'Campeón', desc: 'Gana una partida en línea.' },
-    { id: 'en_equipo', icono: '🤝', nombre: 'Trabajo en equipo', desc: 'Cumple la meta en una partida cooperativa.' },
-    { id: 'retador', icono: '📅', nombre: 'Retador', desc: 'Juega el reto del día.' }
+    { id: 'primer_alien', nombre: 'Primer contacto', desc: 'Destruye tu primer alien.' },
+    { id: 'combo10', nombre: 'Imparable', desc: 'Haz un combo de 10.' },
+    { id: 'cazajefes', nombre: 'Cazajefes', desc: 'Derrota a un jefe en Disparos AR.' },
+    { id: 'sobreviviente', nombre: 'Sobreviviente', desc: 'Sobrevive a un jefe en Esquiva marcianos.' },
+    { id: 'esquivador', nombre: 'Por un pelo', desc: 'Logra 25 «¡por poco!» en una partida.' },
+    { id: 'meteorologo', nombre: 'Meteorólogo', desc: 'Esquiva 30 meteoros en Disparos AR (en total).' },
+    { id: 'coleccionista', nombre: 'Coleccionista', desc: 'Junta 100 cristales (en total).' },
+    { id: 'intocable', nombre: 'Intocable', desc: 'Aguanta 60 segundos sin recibir daño.' },
+    { id: 'poderoso', nombre: 'Poderoso', desc: 'Usa 10 poderes (en total).' },
+    { id: 'exterminador', nombre: 'Exterminador', desc: 'Destruye 500 aliens (en total).' },
+    { id: 'perfecto', nombre: 'Perfecto', desc: 'Gana 3 estrellas en un sector.' },
+    { id: 'conquistador', nombre: 'Conquistador', desc: 'Completa los 4 sectores de un modo.' },
+    { id: 'leyenda', nombre: 'Leyenda', desc: 'Haz 25.000 puntos en una partida.' },
+    { id: 'campeon', nombre: 'Campeón', desc: 'Gana una partida en línea.' },
+    { id: 'en_equipo', nombre: 'Trabajo en equipo', desc: 'Cumple la meta en una partida cooperativa.' },
+    { id: 'retador', nombre: 'Retador', desc: 'Juega el reto del día.' }
   ];
 
   const est = leer('gs_progreso', { logros: {}, cont: {} });

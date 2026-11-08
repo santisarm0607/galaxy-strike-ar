@@ -96,7 +96,7 @@
     cargando = (async () => {
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('sin-camara');
-        progreso('📷 Pidiendo permiso para la cámara…');
+        progreso('Pidiendo permiso para la cámara…');
         stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
@@ -105,12 +105,12 @@
         video.playsInline = true;
         video.srcObject = stream;
         try { await video.play(); } catch (e) { /* se reintenta abajo */ }
-        progreso('🧠 Cargando el detector… (la primera vez tarda un poco)');
+        progreso('Cargando el detector… (la primera vez tarda un poco)');
         const mp = await import(CDN + '/vision_bundle.mjs');
         const archivos = await mp.FilesetResolver.forVisionTasks(CDN + '/wasm');
-        progreso('🧍 Cargando el detector del cuerpo…');
+        progreso('Cargando el detector del cuerpo…');
         pose = await crear(mp.PoseLandmarker, archivos, MODELOS.pose, { numPoses: 1, minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
-        progreso('✋ Cargando el detector de manos…');
+        progreso('Cargando el detector de manos…');
         manosLM = await crear(mp.HandLandmarker, archivos, MODELOS.manos, { numHands: 2, minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
         if (C.estado !== 'cargando') return false; // lo apagaron mientras cargaba
         C.estado = 'listo';
@@ -293,21 +293,21 @@
   C.consejo = function () {
     const pistola = C.manos.some((m) => m.pistola);
     if (C.modo === 'manos') {
-      if (!C.persona) return { ok: false, texto: '✋ Muestra una mano a la cámara (a unos 50 cm).' };
-      if (!pistola && !C.gatilloProbado) return { ok: true, texto: '🔫 ¡Te veo! Ahora haz una pistola con la mano.' };
-      if (!C.gatilloProbado) return { ok: true, texto: '👍 Baja el pulgar como un gatillo para probar.' };
-      return { ok: true, texto: '✅ ¡Listo! Mueve la mano para mover la nave.' };
+      if (!C.persona) return { ok: false, texto: 'Muestra una mano a la cámara (a unos 50 cm).' };
+      if (!pistola && !C.gatilloProbado) return { ok: true, texto: '¡Te veo! Ahora haz una pistola con la mano.' };
+      if (!C.gatilloProbado) return { ok: true, texto: 'Baja el pulgar como un gatillo para probar.' };
+      return { ok: true, texto: '¡Listo! Mueve la mano para mover la nave.' };
     }
-    if (!C.persona || !crudo) return { ok: false, texto: '🧍 Párate frente a la cámara, que se vean tus hombros…' };
-    if (crudo.ancho < 0.14) return { ok: true, texto: '🔍 Acércate un poco a la cámara.' };
-    if (crudo.ancho > 0.42) return { ok: true, texto: '↩️ Aléjate un poco: así te puedes mover más.' };
-    if (crudo.x < 0.33) return { ok: true, texto: '➡️ Muévete un poco a tu derecha, al centro de la silueta.' };
-    if (crudo.x > 0.67) return { ok: true, texto: '⬅️ Muévete un poco a tu izquierda, al centro de la silueta.' };
-    if (crudo.y < 0.28) return { ok: true, texto: '⬇️ Baja un poco la cámara (o aléjate).' };
-    if (crudo.y > 0.78) return { ok: true, texto: '⬆️ Sube un poco la cámara.' };
-    if (!pistola && !C.gatilloProbado) return { ok: true, texto: '✅ ¡Perfecto! Prueba a hacer una pistola con la mano.' };
-    if (!C.gatilloProbado) return { ok: true, texto: '👍 Baja el pulgar como un gatillo para probar.' };
-    return { ok: true, texto: '✅ ¡Perfecto! Quédate ahí y empieza.' };
+    if (!C.persona || !crudo) return { ok: false, texto: 'Párate frente a la cámara, que se vean tus hombros…' };
+    if (crudo.ancho < 0.14) return { ok: true, texto: 'Acércate un poco a la cámara.' };
+    if (crudo.ancho > 0.42) return { ok: true, texto: 'Aléjate un poco: así te puedes mover más.' };
+    if (crudo.x < 0.33) return { ok: true, texto: 'Muévete un poco a tu derecha, al centro de la silueta.' };
+    if (crudo.x > 0.67) return { ok: true, texto: 'Muévete un poco a tu izquierda, al centro de la silueta.' };
+    if (crudo.y < 0.28) return { ok: true, texto: 'Baja un poco la cámara (o aléjate).' };
+    if (crudo.y > 0.78) return { ok: true, texto: 'Sube un poco la cámara.' };
+    if (!pistola && !C.gatilloProbado) return { ok: true, texto: '¡Perfecto! Prueba a hacer una pistola con la mano.' };
+    if (!C.gatilloProbado) return { ok: true, texto: 'Baja el pulgar como un gatillo para probar.' };
+    return { ok: true, texto: '¡Perfecto! Quédate ahí y empieza.' };
   };
   /** ¿Está bien ubicado? (para pintar la silueta de verde) */
   C.bienUbicado = function () {
@@ -374,11 +374,11 @@
       g.rect(x, y, bw, bh);
       g.fill(); g.stroke();
       g.setLineDash([]);
-      g.font = Math.round(h * 0.16) + 'px sans-serif';
+      g.font = '800 ' + Math.round(h * 0.07) + 'px Orbitron, sans-serif';
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.globalAlpha = ok ? 0.25 : 0.6;
-      g.fillText('✋', w / 2, y + bh / 2);
+      g.fillStyle = ok ? 'rgba(124,255,79,0.7)' : 'rgba(255,255,255,0.7)';
+      g.fillText('MANO AQUÍ', w / 2, y + bh / 2);
     } else {
       // Cabeza y hombros
       const cx = w / 2, r = h * 0.085;
@@ -433,7 +433,7 @@
       g.font = '700 12px "Exo 2", sans-serif';
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.fillText('🧍 No te veo', w / 2, h / 2);
+      g.fillText('No te veo', w / 2, h / 2);
     }
   }
 })(window.GS);

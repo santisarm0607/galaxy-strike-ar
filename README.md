@@ -1,9 +1,9 @@
-# 🛸 GALAXY STRIKE AR · versión 3
+# GALAXY STRIKE AR · versión 3
 
 Juego de aliens en 3D con **dos modos**:
 
-- 🎯 **Disparos AR** (para celular): ves tu cuarto por la cámara trasera, aparecen ovnis y aliens a tu alrededor y **el celular es tu arma**: apuntas moviéndolo, disparas tocando la pantalla y esquivas inclinándolo hacia un lado.
-- 👾 **Esquiva marcianos** (para PC): pilotas una nave 3D a toda velocidad y tienes que **esquivar a los marcianos** que vienen hacia ti.
+- **Disparos AR** (para celular): ves tu cuarto por la cámara trasera, aparecen ovnis y aliens a tu alrededor y **el celular es tu arma**: apuntas moviéndolo, disparas tocando la pantalla y esquivas inclinándolo hacia un lado.
+- **Esquiva marcianos** (para PC): pilotas una nave 3D a toda velocidad y tienes que **esquivar a los marcianos** que vienen hacia ti.
 
 Cada modo tiene **campaña de 4 sectores** (con jefe al final de cada uno) y **modo Infinito** para batir récords. Además: poderes, logros, naves desbloqueables, música, tutorial, ajustes, multijugador competitivo **o cooperativo**.
 
@@ -13,30 +13,31 @@ Hecho por **SantiSarm** con HTML, CSS y JavaScript puro (sin frameworks).
 
 ---
 
-## 🆕 Qué trae la versión 3
+## Qué trae la versión 3
 
 | | |
 |---|---|
-| 👑 **4 jefes distintos** | Cada sector termina con su propio jefe (ver la tabla de abajo). En el Infinito se turnan. |
-| 📅 **Reto del día** | Una partida especial cada día, **igual para todos**, con un modificador distinto. Cuenta tu mejor intento del día. |
-| 💥 **Golpes que se sienten** | Micro-pausa al destruir o recibir daño, un **arco rojo** en el borde que te dice de dónde vino el golpe y vibraciones distintas para cada cosa. |
-| ✋ **Cámara: modo sentado** | «Solo manos»: tu mano mueve la nave y dispara al frente. Cansa menos y sirve con la cámara cerca. |
-| 🔫 **Gatillo visible** | La mira se cierra y se pone rosada al bajar el pulgar, y un arco amarillo muestra cuánto falta. |
-| 🧍 **Guía para la cámara** | Una silueta en la pantalla de preparación que se pone verde cuando estás bien ubicado, con consejos («acércate», «muévete a tu derecha»…). |
-| 🧩 **Código ordenado** | La interfaz quedó dividida en módulos (carpeta `js/ui/`). |
+| **4 jefes distintos** | Cada sector termina con su propio jefe (ver la tabla de abajo). En el Infinito se turnan. |
+| **Reto del día** | Una partida especial cada día, **igual para todos**, con un modificador distinto. Cuenta tu mejor intento del día. |
+| **Golpes que se sienten** | Micro-pausa al destruir o recibir daño, un **arco rojo** en el borde que te dice de dónde vino el golpe y vibraciones distintas para cada cosa. |
+| **Cámara: modo sentado** | «Solo manos»: tu mano mueve la nave y dispara al frente. Cansa menos y sirve con la cámara cerca. |
+| **Gatillo visible** | La mira se cierra y se pone rosada al bajar el pulgar, y un arco amarillo muestra cuánto falta. |
+| **Guía para la cámara** | Una silueta en la pantalla de preparación que se pone verde cuando estás bien ubicado, con consejos («acércate», «muévete a tu derecha»…). |
+| **Código ordenado** | La interfaz quedó dividida en módulos (carpeta `js/ui/`). |
+| **Sin emojis** | El juego ya no usa emojis en ningún lado: menús, avisos, logros, cápsulas y reacciones van con texto. Las cápsulas muestran una palabra: ESCUDO, x2, BOMBA… |
 
 ### Los jefes
 
 | Sector | Jefe | Disparos AR | Esquiva marcianos |
 |---|---|---|---|
-| 1 | 🛸 **Guardián lunar** | Ráfagas, abanico y drones. Al final, dispárale al **ojo**. | Orbes, abanico y láseres. |
-| 2 | 🪨 **El Rompe-rocas** | Te lanza **meteoros** (¡esquívalos!) y se cubre con una coraza: dispárale cuando se abra. Al final, su **núcleo de lava**. | Te lanza rocas y luego **filas de rocas** con un hueco. |
-| 3 | 🪼 **La Reina de la nebulosa** | Se **teletransporta** alrededor tuyo (sigue las flechas), lanza **anillos de plasma** y llama fantasmas. Al final, su **corazón**. | Salta de lado a lado, anillos de orbes (¡quédate quieto!) y cortinas de plasma. |
-| 4 | 👑 **Zorp, el emperador** | Cañones gemelos, refuerzos (drones y blindados) y todo su arsenal. Al final, dispárale a **Zorp en persona**. | Cañones, láseres imperiales y refuerzos. |
+| 1 | **Guardián lunar** | Ráfagas, abanico y drones. Al final, dispárale al **ojo**. | Orbes, abanico y láseres. |
+| 2 | **El Rompe-rocas** | Te lanza **meteoros** (¡esquívalos!) y se cubre con una coraza: dispárale cuando se abra. Al final, su **núcleo de lava**. | Te lanza rocas y luego **filas de rocas** con un hueco. |
+| 3 | **La Reina de la nebulosa** | Se **teletransporta** alrededor tuyo (sigue las flechas), lanza **anillos de plasma** y llama fantasmas. Al final, su **corazón**. | Salta de lado a lado, anillos de orbes (¡quédate quieto!) y cortinas de plasma. |
+| 4 | **Zorp, el emperador** | Cañones gemelos, refuerzos (drones y blindados) y todo su arsenal. Al final, dispárale a **Zorp en persona**. | Cañones, láseres imperiales y refuerzos. |
 
 ### Reto del día
 
-En la pantalla de sectores está la tarjeta **📅 Reto del día**. Cada día cambia el modificador (lluvia de meteoros, solo 3 vidas, poderes de sobra, turbo o directo al jefe) y la partida es la misma para todos, así que pueden comparar puntajes en el salón. Puedes intentarlo las veces que quieras. Con Supabase activado, también hay **tabla mundial del día**.
+En la pantalla de sectores está la tarjeta **Reto del día**. Cada día cambia el modificador (lluvia de meteoros, solo 3 vidas, poderes de sobra, turbo o directo al jefe) y la partida es la misma para todos, así que pueden comparar puntajes en el salón. Puedes intentarlo las veces que quieras. Con Supabase activado, también hay **tabla mundial del día**.
 
 > La vibración solo funciona en Android: Safari en iPhone no deja vibrar desde una página web.
 
@@ -44,24 +45,24 @@ En la pantalla de sectores está la tarjeta **📅 Reto del día**. Cada día ca
 
 | | |
 |---|---|
-| 🗺️ **Campaña** | 4 sectores con colores, oleadas con nombre y un jefe al final. Se desbloquean en orden. |
-| ⭐ **Estrellas** | ★★★ sin perder vidas · ★★ perdiendo hasta 2 · ★ si terminas. |
-| ♾️ **Infinito** | Oleadas cada vez más difíciles; cada 5 hay nave nodriza. Guarda tu **top 10**. |
-| 👾 **Enemigos nuevos** | Divisor (se parte en dos), Fantasma (se teletransporta), Blindado (escudo que aguanta un disparo) y emboscadas por la espalda. |
-| 🛸 **Jefes por fases** | La nave nodriza se enfurece, dispara en abanico y al final deja el **ojo expuesto**: dispárale ahí. |
-| ⚡ **Poderes** | Cápsulas con 🛡️ Escudo, ⏳ Cámara lenta, ✨ Puntos x2, 🔥 Ráfaga, 💣 Bomba y 🧲 Imán. |
-| 🔴 **Esquiva** | Láseres con hueco, anillos dorados para sumar puntos, marcianos que se teletransportan. |
-| 🏅 **15 logros** | Y **5 naves** que se desbloquean con ellos (cambian el color de tu nave y de tu láser). |
-| 🎵 **Música** | Synthwave hecha por código que sube de intensidad y cambia con el jefe. |
-| 🎓 **Tutorial** | Interactivo la primera vez de cada modo (y «Practicar» en *Cómo jugar*). |
-| ⚙️ **Ajustes** | Dificultad, música, sonido, vibración, sensibilidad, **modo zurdo** y calidad gráfica (auto/alta/baja). |
-| 🤝 **Cooperativo** | En línea: suman puntos en equipo, se mandan escudos y si caes vuelves a los 10 s. |
-| 🔥 **Reacciones** | Emojis en vivo durante las partidas en línea, y botón **Revancha** para el anfitrión. |
-| 🌎 **Récords mundiales** | Opcional, con Supabase (gratis). Ver más abajo. |
+| **Campaña** | 4 sectores con colores, oleadas con nombre y un jefe al final. Se desbloquean en orden. |
+| **Estrellas** | ★★★ sin perder vidas · ★★ perdiendo hasta 2 · ★ si terminas. |
+| **Infinito** | Oleadas cada vez más difíciles; cada 5 hay nave nodriza. Guarda tu **top 10**. |
+| **Enemigos nuevos** | Divisor (se parte en dos), Fantasma (se teletransporta), Blindado (escudo que aguanta un disparo) y emboscadas por la espalda. |
+| **Jefes por fases** | La nave nodriza se enfurece, dispara en abanico y al final deja el **ojo expuesto**: dispárale ahí. |
+| **Poderes** | Cápsulas con Escudo, Cámara lenta, Puntos x2, Ráfaga, Bomba y Imán. |
+| **Esquiva** | Láseres con hueco, anillos dorados para sumar puntos, marcianos que se teletransportan. |
+| **15 logros** | Y **5 naves** que se desbloquean con ellos (cambian el color de tu nave y de tu láser). |
+| **Música** | Synthwave hecha por código que sube de intensidad y cambia con el jefe. |
+| **Tutorial** | Interactivo la primera vez de cada modo (y «Practicar» en *Cómo jugar*). |
+| **Ajustes** | Dificultad, música, sonido, vibración, sensibilidad, **modo zurdo** y calidad gráfica (auto/alta/baja). |
+| **Cooperativo** | En línea: suman puntos en equipo, se mandan escudos y si caes vuelves a los 10 s. |
+| **Reacciones** | Reacciones rápidas de texto (¡BIEN!, JAJA, ¡UY!, GG) durante las partidas en línea, y botón **Revancha** para el anfitrión. |
+| **Récords mundiales** | Opcional, con Supabase (gratis). Ver más abajo. |
 
 ---
 
-## 🎮 Cómo se juega: Disparos AR
+## Cómo se juega: Disparos AR
 
 | Acción | En el celular | En el PC (para probar) |
 |---|---|---|
@@ -69,44 +70,44 @@ En la pantalla de sectores está la tarjeta **📅 Reto del día**. Cada día ca
 | Disparar | Tocar la pantalla o mantener **FUEGO** | Clic o Espacio |
 | Esquivar | Inclinar el celular a un lado (como un timón) | A / D o ← / → |
 | Centrar la mira | Tocar el radar | Tecla R |
-| Pausa | Botón ❚❚ | Esc o P |
+| Pausa | Botón | Esc o P |
 
 **Enemigos**
-- 🟢 **Ovni** (100): flota a tu alrededor y te dispara orbes de plasma.
-- 🟡 **Dron** (150): un alien con jetpack que viene directo hacia ti.
-- 🟠 **Divisor**: al destruirlo se parte en dos mini-aliens.
-- 🟣 **Fantasma**: desaparece y aparece en otro lugar. Dispárale cuando se vuelva sólido.
-- 🔵 **Blindado**: tiene un escudo que aguanta el primer disparo.
-- 🛸 **Nave nodriza**: tiene fases; en la última su ojo queda expuesto y le haces mucho más daño ahí.
-- 🔴 **Meteoro**: no se puede destruir. **Esquívalo** inclinando el celular.
+- **Ovni** (100): flota a tu alrededor y te dispara orbes de plasma.
+- **Dron** (150): un alien con jetpack que viene directo hacia ti.
+- **Divisor**: al destruirlo se parte en dos mini-aliens.
+- **Fantasma**: desaparece y aparece en otro lugar. Dispárale cuando se vuelva sólido.
+- **Blindado**: tiene un escudo que aguanta el primer disparo.
+- **Nave nodriza**: tiene fases; en la última su ojo queda expuesto y le haces mucho más daño ahí.
+- **Meteoro**: no se puede destruir. **Esquívalo** inclinando el celular.
 
 Dispárale a las **cápsulas** blancas para ganar un poder. Los combos multiplican tus puntos hasta **x4**. Las flechas del borde y el radar te muestran dónde hay enemigos fuera de tu vista.
 
 ---
 
-## 👾 Cómo se juega: Esquiva marcianos
+## Cómo se juega: Esquiva marcianos
 
 | Acción | En el PC | En el celular |
 |---|---|---|
 | Mover la nave | Mouse, o WASD / flechas | Arrastrar el dedo |
 | Impulso | Clic o Espacio | Botón **IMPULSO** |
-| Pausa | Esc o P | Botón ❚❚ |
+| Pausa | Esc o P | Botón |
 
 - En la **campaña** sobrevives 55 segundos en cada sector y luego aguantas a la nave nodriza (con sus fases).
 - En el **Infinito** subes de nivel cada 20 segundos y cada 4 niveles llega la nave nodriza.
 - El **círculo rojo** te avisa dónde va a pasar un marciano. Los **muros** y los **láseres** tienen un hueco.
 - **Impulso:** te lanza rápido y, mientras dura, nada te hace daño.
 - Pasa por dentro de los **anillos dorados** (+100), pasa raspando para un **«¡por poco!»** (+25) y junta **cristales** (+50; cada 12 = +1 ❤).
-- Atraviesa las **cápsulas** para ganar poderes (el 🧲 Imán atrae los cristales).
+- Atraviesa las **cápsulas** para ganar poderes (el Imán atrae los cristales).
 
-### 🧍 Control con cámara (cuerpo y manos)
+### Control con cámara (cuerpo y manos)
 
-En el menú, con *Esquiva marcianos* elegido, toca **Control: 🧍 Cámara**. Funciona en PC (webcam) y en celular (cámara frontal).
+En el menú, con *Esquiva marcianos* elegido, toca **Control: Cámara**. Funciona en PC (webcam) y en celular (cámara frontal).
 
 Hay dos formas de jugar (se elige en la pantalla de la cámara o en **Ajustes → Control con cámara**):
 
-- **🧍 De pie:** tu cuerpo mueve la nave (lo de la tabla de abajo).
-- **✋ Sentado (solo manos):** la nave sigue a tu mano, como un mouse en el aire. Con la mano en pistola y el pulgar abajo dispara **al frente de la nave**. Si muestras la otra mano, también puedes apuntar con ella. Siéntate a unos 50 cm.
+- **De pie:** tu cuerpo mueve la nave (lo de la tabla de abajo).
+- **Sentado (solo manos):** la nave sigue a tu mano, como un mouse en el aire. Con la mano en pistola y el pulgar abajo dispara **al frente de la nave**. Si muestras la otra mano, también puedes apuntar con ella. Siéntate a unos 50 cm.
 
 La mira te muestra el gatillo: **verde** = mano en pistola, lista; el **arco amarillo** se llena a medida que bajas el pulgar; **rosada y cerrada** = ¡disparando! (con un destello en cada disparo).
 
@@ -115,7 +116,7 @@ La mira te muestra el gatillo: **verde** = mano en pistola, lista; el **arco ama
 | Mover la nave | Muévete de lado, agáchate o estírate: la nave te sigue |
 | Apuntar | Mano en forma de **pistola** (índice estirado, pulgar arriba): la mira sigue tu dedo |
 | Disparar | **Baja el pulgar**, como un gatillo (si lo dejas abajo, dispara seguido) |
-| Impulso | **Abre la mano** ✋ un momento |
+| Impulso | **Abre la mano** un momento |
 
 - Solo con cámara puedes **dispararle a los marcianos** (+50 con combo). Los **muros** y los **láseres** no se rompen: igual hay que pasar por el hueco.
 - A los **jefes** también les puedes disparar: si los derribas antes de que se vayan ganas **+1000** extra (por sector).
@@ -128,7 +129,7 @@ La mira te muestra el gatillo: **verde** = mano en pistola, lista; el **arco ama
 
 ---
 
-## 📁 Estructura
+## Estructura
 
 ```
 galaxy-strike-ar/
@@ -160,7 +161,7 @@ galaxy-strike-ar/
     └── ui/              → la interfaz, dividida en módulos:
         ├── base.js      → utilidades, pantallas, pantalla completa, permisos y cuenta regresiva
         ├── partida.js   → HUD, eventos del juego, fin de partida, controles y pausa
-        ├── sala.js      → multijugador en línea, marcador, resultados y emojis
+        ├── sala.js      → multijugador en línea, marcador, resultados y reacciones
         ├── menus.js     → botones, sectores, reto del día, perfil (logros, récords, naves) y ajustes
         └── camara.js    → control con cámara: preparación, silueta guía y modos
     └── main.js          → arranque, bucle del juego y calidad automática
@@ -179,7 +180,7 @@ Los aliens existen en un mundo 3D alrededor de ti. Cada cuadro el juego lee el g
 
 ---
 
-## 💻 Probarlo en el PC (VS Code)
+## Probarlo en el PC (VS Code)
 
 1. Abre la carpeta `galaxy-strike-ar` en VS Code.
 2. Instala la extensión **Live Server** (de Ritwick Dey).
@@ -191,7 +192,7 @@ En el PC arranca el modo **Esquiva marcianos**, que se juega con el mouse. Si el
 
 ---
 
-## 📱 Jugarlo en el celular (necesita HTTPS)
+## Jugarlo en el celular (necesita HTTPS)
 
 Los navegadores **solo dejan usar la cámara y el giroscopio en páginas con `https://`**. Por eso, abrir la IP de tu PC (`http://192.168.x.x:5500`) desde el celular **no funciona** para la AR. Publica el juego gratis con una de estas opciones:
 
@@ -212,7 +213,7 @@ Los navegadores **solo dejan usar la cámara y el giroscopio en páginas con `ht
 
 ---
 
-## ↔️ Horizontal y pantalla completa
+## ↔ Horizontal y pantalla completa
 
 El juego está hecho para jugarse **en horizontal** (celular acostado):
 
@@ -230,12 +231,12 @@ El juego está hecho para jugarse **en horizontal** (celular acostado):
 
 ---
 
-## 🍎 Cómo verlo mejor en iPhone
+## Cómo verlo mejor en iPhone
 
 Safari en iPhone no deja poner páginas web en pantalla completa, pero así se ve casi igual:
 
 1. Abre el enlace `https://...` del juego en **Safari**.
-2. Quita el **bloqueo de orientación** 🔒 (desliza desde la esquina de arriba a la derecha) y **gira el celular**.
+2. Quita el **bloqueo de orientación** (desliza desde la esquina de arriba a la derecha) y **gira el celular**.
 3. Toca el **ícono de la página** en la barra de Safari, al lado de la dirección (si no lo ves, toca **•••**), y elige **«Ocultar barra de herramientas»**. Para que vuelva, toca arriba o abajo de la pantalla.
 
 Consejos:
@@ -245,14 +246,14 @@ Consejos:
 
 ---
 
-## 🌐 Multijugador en línea
+## Multijugador en línea
 
 - Uno toca **Crear sala** y le sale un código de 4 letras (por ejemplo `HA8T`). Los demás lo escriben en **Unirse**. Hasta **4 pilotos**. También puedes tocar **Compartir** para mandar un enlace con el código.
 - El anfitrión elige el **modo** (en el menú, antes de crear la sala) y el **tipo de partida** (botón en la sala):
-  - ⚔️ **Competencia:** gana quien haga más puntos en 3 minutos. Cada 8 kills le mandas meteoros (o una estampida en *Esquiva*) a tus rivales.
-  - 🤝 **Cooperativo:** suman puntos para llegar a la meta del equipo (6.000 por piloto). Cuando llenas tu barra le mandas un **escudo** a tu equipo, y si caes vuelves a los 10 segundos.
+  - **Competencia:** gana quien haga más puntos en 3 minutos. Cada 8 kills le mandas meteoros (o una estampida en *Esquiva*) a tus rivales.
+  - **Cooperativo:** suman puntos para llegar a la meta del equipo (6.000 por piloto). Cuando llenas tu barra le mandas un **escudo** a tu equipo, y si caes vuelves a los 10 segundos.
 - Todos enfrentan **la misma invasión** (las oleadas salen iguales para todos), cada uno en su espacio. En línea todos juegan en dificultad Normal.
-- Durante la partida hay **reacciones** (🔥😂😱👏) a la derecha de la pantalla. Al terminar, el anfitrión tiene **🔁 Revancha**.
+- Durante la partida hay **reacciones** () a la derecha de la pantalla. Al terminar, el anfitrión tiene **Revancha**.
 
 Funciona con **PeerJS** (WebRTC): los celulares se conectan directo usando el servidor público gratuito de PeerJS para encontrarse, así que **no necesitas montar un servidor**. Si el anfitrión sale, la sala se cierra.
 
@@ -260,7 +261,7 @@ Funciona con **PeerJS** (WebRTC): los celulares se conectan directo usando el se
 
 ---
 
-## 🌎 Récords mundiales (opcional, gratis con Supabase)
+## Récords mundiales (opcional, gratis con Supabase)
 
 Sin configurar nada, los récords se guardan en cada dispositivo (top 10). Para tener una **tabla mundial**:
 
@@ -289,7 +290,7 @@ window.GS.CONFIG_GLOBAL = {
 };
 ```
 
-Listo: al terminar una partida del modo Infinito o del reto del día se envía el puntaje, y en **Logros → Récords** aparecen la tabla 🌎 Mundial y la del reto de hoy.
+Listo: al terminar una partida del modo Infinito o del reto del día se envía el puntaje, y en **Logros → Récords** aparecen la tabla Mundial y la del reto de hoy.
 
 **¿Ya habías creado la tabla con la versión 2?** Ejecuta esto para que acepte también los puntajes del reto del día:
 
@@ -302,7 +303,7 @@ alter table records add constraint records_tipo_check check (tipo in ('ar', 'esq
 
 ---
 
-## 🛠️ Personalizar
+## Personalizar
 
 - **Oleadas y sectores:** en `js/sectores.js`. Cada oleada es una lista de grupos, por ejemplo `{ tipo: 'divisor', n: 4, cada: 1.2, desde: 3, detras: true }` (4 divisores, uno cada 1,2 s, desde el segundo 3, apareciendo por tu espalda). También puedes cambiar los colores de cada sector y lo que pasa en *Esquiva* (`vel`, `laseres`, `muros`, `jefeFases`…).
 - **Disparos AR:** `CONFIG` al inicio de `js/juego.js` (vidas, cadencia, ayuda al apuntar, distancia del esquive…).

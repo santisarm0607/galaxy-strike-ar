@@ -49,7 +49,7 @@
 
 
   /* Tipo de juego: 'ar' (Disparos AR, para celular) o 'esquiva' (Esquiva marcianos, para PC) */
-  const NOMBRE_TIPO = { ar: '🎯 Disparos AR', esquiva: '👾 Esquiva marcianos' };
+  const NOMBRE_TIPO = { ar: 'Disparos AR', esquiva: 'Esquiva marcianos' };
   const esPC = () => !(window.matchMedia && matchMedia('(pointer: coarse)').matches);
 
   /* Control de Esquiva marcianos: 'normal' (mouse, teclado o dedo) o 'camara' (cuerpo y manos) */
@@ -232,7 +232,7 @@
     mostrar('pCuenta');
     const el = $('txtCuenta');
     $('txtCuentaPista').textContent = pista || (J.tipoJuego === 'esquiva' ? '¡Prepárate para esquivar!' : 'Apunta el celular al frente');
-    if (GS.Esquiva.camara) $('txtCuentaPista').textContent = (pista ? pista + ' · ' : '') + '🧍 Quédate en el centro';
+    if (GS.Esquiva.camara) $('txtCuentaPista').textContent = (pista ? pista + ' · ' : '') + 'Quédate en el centro';
     let n = 3;
     const pintar = (txt) => {
       el.textContent = txt;

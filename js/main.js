@@ -32,7 +32,7 @@
       if (fps.lentos >= 2) {
         Aj._autoBaja = true;
         GS.Juego.redimensionar();
-        if (GS.UI.toast) GS.UI.toast('🔋 Bajamos la calidad gráfica para que vaya más fluido.', 2600);
+        if (GS.UI.toast) GS.UI.toast('Bajamos la calidad gráfica para que vaya más fluido.', 2600);
       }
     }
 

@@ -25,8 +25,8 @@
     document.body.classList.toggle('con-cuerpo', conCam);
     $('pistaTeclas').textContent = conCam
       ? GS.Cuerpo.modo === 'manos'
-        ? '✋ Mueve la mano: la nave te sigue · 🔫 Pistola + baja el pulgar: disparar al frente · Abre la mano: impulso · Esc: pausa'
-        : '🧍 Muévete: la nave te sigue · 🔫 Mano en pistola + baja el pulgar: disparar · ✋ Mano abierta: impulso · Esc: pausa'
+        ? 'Mueve la mano: la nave te sigue · Pistola + baja el pulgar: disparar al frente · Abre la mano: impulso · Esc: pausa'
+        : 'Muévete: la nave te sigue · Mano en pistola + baja el pulgar: disparar · Mano abierta: impulso · Esc: pausa'
       : J.tipoJuego === 'esquiva'
         ? 'Mouse o WASD / flechas: mover la nave · Clic o Espacio: impulso · Esc: pausa'
         : 'Mouse: apuntar · Clic / Espacio: disparar · A / D: esquivar · R: centrar';
@@ -39,7 +39,7 @@
     $('hudPuntos').textContent = '0';
     $('reacciones').innerHTML = '';
     $('equipo').classList.toggle('oculto', !(modo === 'online' && Sala.coop));
-    $('cargaAtaque').querySelector('span').textContent = Sala.coop && modo === 'online' ? '🛡️ AYUDA' : J.tipoJuego === 'esquiva' ? '👾 ESTAMPIDA' : '☄️ ATAQUE';
+    $('cargaAtaque').querySelector('span').textContent = Sala.coop && modo === 'online' ? 'AYUDA' : J.tipoJuego === 'esquiva' ? 'ESTAMPIDA' : 'ATAQUE';
     GS.Poderes.reiniciar();
     st.ultimoSegundo = -1;
     st.ultimoTextoOleada = '';
@@ -57,7 +57,7 @@
     cont.innerHTML = '';
     for (let i = 0; i < (J.vidasMax || J.CONFIG.vidasMax); i++) {
       const s = document.createElement('span');
-      s.textContent = '❤';
+      s.textContent = '❤︎';
       if (i >= J.vidas) s.className = 'vacia';
       cont.appendChild(s);
     }
@@ -99,12 +99,12 @@
   J.on('oleada', (n, jefe, nombreOleada) => {
     if (J.tutorial) return;
     if (J.tipoJuego === 'esquiva') {
-      aviso(J.campana ? 'SECTOR ' + J.campana + ' · ' + (nombreOleada || '') : jefe ? '⚠️ ¡LLEGA UN JEFE!' : 'NIVEL ' + n, jefe ? 'peligro' : 'info');
+      aviso(J.campana ? 'SECTOR ' + J.campana + ' · ' + (nombreOleada || '') : jefe ? '¡LLEGA UN JEFE!' : 'NIVEL ' + n, jefe ? 'peligro' : 'info');
       return;
     }
     const total = J.totalOleadas();
     $('hudOleada').textContent = J.campana ? 'SECTOR ' + J.campana + ' · OLEADA ' + n + '/' + total : 'OLEADA ' + n;
-    const txt = (jefe ? '⚠️ ' : 'OLEADA ' + n + (total ? '/' + total : '') + ' · ') + (nombreOleada || '');
+    const txt = (jefe ? '' : 'OLEADA ' + n + (total ? '/' + total : '') + ' · ') + (nombreOleada || '');
     aviso(txt, jefe ? 'peligro' : 'info', 2300);
   });
   J.on('oleadaSuperada', (n) => aviso('¡OLEADA ' + n + ' SUPERADA!', 'exito'));
@@ -126,11 +126,11 @@
     if (!R.conectado) return;
     if (Sala.coop) {
       R.enviar({ t: 'ayuda', nombre: nombre() });
-      aviso('🛡️ ¡Le mandaste un escudo a tu equipo!', 'exito');
+      aviso('¡Le mandaste un escudo a tu equipo!', 'exito');
       return;
     }
     R.enviar({ t: 'ataque', nombre: nombre(), n });
-    aviso(J.tipoJuego === 'esquiva' ? '🚀 ¡Estampida enviada a tus rivales!' : '🚀 ¡Lluvia de meteoros enviada a tus rivales!', 'exito');
+    aviso(J.tipoJuego === 'esquiva' ? '¡Estampida enviada a tus rivales!' : '¡Lluvia de meteoros enviada a tus rivales!', 'exito');
   });
   J.on('fin', mostrarFin);
 
@@ -188,17 +188,17 @@
         if (motivo === 'victoria') {
           const est = J.vidasPerdidas === 0 ? 3 : J.vidasPerdidas <= 2 ? 2 : 1;
           const r = GS.Progreso.completarSector(tipo, J.campana, est, J.puntos);
-          $('txtFinTitulo').textContent = J.campana === GS.Sectores.total ? '👑 ¡CAMPAÑA COMPLETADA!' : '¡SECTOR COMPLETADO!';
+          $('txtFinTitulo').textContent = J.campana === GS.Sectores.total ? '¡CAMPAÑA COMPLETADA!' : '¡SECTOR COMPLETADO!';
           $('finEstrellas').textContent = estrellasTexto(est);
-          if (r.nuevoDesbloqueo) toast('🔓 Desbloqueaste el sector ' + (J.campana + 1) + ': ' + GS.Sectores.get(J.campana + 1).nombre, 4000);
+          if (r.nuevoDesbloqueo) toast('Desbloqueaste el sector ' + (J.campana + 1) + ': ' + GS.Sectores.get(J.campana + 1).nombre, 4000);
           if (J.campana < GS.Sectores.total) {
-            $('btnOtraVez').textContent = 'Siguiente sector ▶';
+            $('btnOtraVez').textContent = 'Siguiente sector ▶︎';
             $('btnOtraVez').dataset.accion = 'siguiente';
             extra.textContent = 'Repetir ' + sec.nombre;
             extra.dataset.accion = 'repetir';
             extra.classList.remove('oculto');
           } else {
-            $('btnOtraVez').textContent = '♾️ Jugar Infinito';
+            $('btnOtraVez').textContent = 'Jugar Infinito';
             $('btnOtraVez').dataset.accion = 'infinito';
             extra.textContent = 'Repetir el sector final';
             extra.dataset.accion = 'repetir';
@@ -211,18 +211,18 @@
         }
       } else if (J.reto) {
         const r = GS.Reto.registrar(tipo, J.puntos);
-        $('txtFinTitulo').textContent = r.nuevoMejor && r.intentos > 1 ? '📅 ¡NUEVO MEJOR DE HOY!' : '📅 RETO DEL DÍA';
-        cont.appendChild(fila('Reto de hoy', J.reto.icono + ' ' + J.reto.nombre));
+        $('txtFinTitulo').textContent = r.nuevoMejor && r.intentos > 1 ? '¡NUEVO MEJOR DE HOY!' : 'RETO DEL DÍA';
+        cont.appendChild(fila('Reto de hoy', J.reto.nombre));
         cont.appendChild(fila('Tu mejor de hoy', r.mejor.toLocaleString('es-CO') + ' (intento ' + r.intentos + ')'));
-        $('btnOtraVez').textContent = '🔁 Reintentar el reto';
+        $('btnOtraVez').textContent = 'Reintentar el reto';
         $('btnOtraVez').dataset.accion = 'reto';
         if (GS.Progreso.global.activo() && J.puntos > 0) {
           const nota = document.createElement('p');
           nota.className = 'nota';
-          nota.textContent = '🌎 Enviando tu puntaje a la tabla del día…';
+          nota.textContent = 'Enviando tu puntaje a la tabla del día…';
           cont.appendChild(nota);
           GS.Progreso.global.enviar(GS.Reto.tipoGlobal(tipo), nombre(), J.puntos).then((ok) => {
-            nota.textContent = ok ? '🌎 ¡Enviado! Mira la tabla del día en Logros → Récords.' : '🌎 No se pudo enviar a la tabla del día.';
+            nota.textContent = ok ? '¡Enviado! Mira la tabla del día en Logros → Récords.' : 'No se pudo enviar a la tabla del día.';
           });
         } else {
           const nota = document.createElement('p');
@@ -239,9 +239,9 @@
         if (GS.Progreso.global.activo() && J.puntos > 0) {
           const nota = document.createElement('p');
           nota.className = 'nota';
-          nota.textContent = '🌎 Enviando tu puntaje a la tabla mundial…';
+          nota.textContent = 'Enviando tu puntaje a la tabla mundial…';
           cont.appendChild(nota);
-          GS.Progreso.global.enviar(tipo, nombre(), J.puntos).then((ok) => { nota.textContent = ok ? '🌎 ¡Puntaje enviado a la tabla mundial!' : '🌎 No se pudo enviar a la tabla mundial.'; });
+          GS.Progreso.global.enviar(tipo, nombre(), J.puntos).then((ok) => { nota.textContent = ok ? '¡Puntaje enviado a la tabla mundial!' : 'No se pudo enviar a la tabla mundial.'; });
         }
       }
       K.mostrarRecord();
@@ -253,7 +253,7 @@
       $('txtFinTitulo').textContent = Sala.coop ? 'MISIÓN EN EQUIPO' : 'RESULTADOS';
       K.renderRanking();
       $('btnOtraVez').dataset.accion = R.conectado && R.esHost ? 'revancha' : 'sala';
-      $('btnOtraVez').textContent = !R.conectado ? 'Multijugador' : R.esHost ? '🔁 Revancha' : 'Volver a la sala';
+      $('btnOtraVez').textContent = !R.conectado ? 'Multijugador' : R.esHost ? 'Revancha' : 'Volver a la sala';
       if (R.conectado && R.esHost) {
         extra.textContent = 'Volver a la sala';
         extra.dataset.accion = 'sala';

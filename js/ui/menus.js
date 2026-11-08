@@ -137,11 +137,11 @@
     if (st.sectorElegido === 'reto') {
       const mod = GS.Reto.mod();
       cuentaRegresiva(() => J.iniciar({ modo: 'solo', tipo: st.tipoElegido, sector: null, reto: mod, semilla: GS.Reto.semilla(st.tipoElegido) }),
-        '📅 RETO DEL DÍA · ' + mod.icono + ' ' + mod.nombre);
+        'RETO DEL DÍA · ' + mod.nombre);
       return;
     }
     const sec = st.sectorElegido ? GS.Sectores.get(st.sectorElegido) : null;
-    const pista = sec ? 'SECTOR ' + sec.id + ' · ' + sec.nombre : '♾️ MODO INFINITO';
+    const pista = sec ? 'SECTOR ' + sec.id + ' · ' + sec.nombre : 'MODO INFINITO';
     cuentaRegresiva(() => J.iniciar({ modo: 'solo', tipo: st.tipoElegido, sector: st.sectorElegido, semilla: (Math.random() * 1e9) >>> 0 }), pista);
   }
 
@@ -151,10 +151,10 @@
       J.estado = 'cuenta';
       J.entidades = [];
       GS.Poderes.reiniciar();
-      toast('✅ ¡Tutorial completado!', 2000);
+      toast('¡Tutorial completado!', 2000);
       despues();
     };
-    cuentaRegresiva(() => { J.iniciar({ modo: 'solo', tipo: st.tipoElegido, tutorial: true }); $('hudOleada').textContent = '🎓 TUTORIAL'; }, '🎓 TUTORIAL');
+    cuentaRegresiva(() => { J.iniciar({ modo: 'solo', tipo: st.tipoElegido, tutorial: true }); $('hudOleada').textContent = 'TUTORIAL'; }, 'TUTORIAL');
   }
 
   function mostrarRecord() {
@@ -185,7 +185,7 @@
       b.className = 'tarjeta-sector' + (p.desbloqueado ? '' : ' bloqueada') + (p.completado ? ' completada' : '');
       b.style.setProperty('--c', sec.tema.acento);
       b.disabled = !p.desbloqueado;
-      const num = document.createElement('span'); num.className = 'ts-num'; num.textContent = p.desbloqueado ? 'SECTOR ' + sec.id : '🔒 SECTOR ' + sec.id;
+      const num = document.createElement('span'); num.className = 'ts-num'; num.textContent = p.desbloqueado ? 'SECTOR ' + sec.id : 'SECTOR ' + sec.id + ' · BLOQUEADO';
       const nom = document.createElement('strong'); nom.textContent = sec.nombre;
       const lema = document.createElement('small'); lema.textContent = p.desbloqueado ? sec.lema : 'Completa el sector ' + (sec.id - 1) + ' para abrirlo';
       const est = document.createElement('span'); est.className = 'ts-estrellas'; est.textContent = estrellasTexto(p.estrellas);
@@ -199,8 +199,8 @@
     const reto = document.createElement('button');
     reto.type = 'button';
     reto.className = 'tarjeta-sector reto';
-    const r1 = document.createElement('span'); r1.className = 'ts-num'; r1.textContent = '📅 RETO DEL DÍA';
-    const r2 = document.createElement('strong'); r2.textContent = mod.icono + ' ' + mod.nombre;
+    const r1 = document.createElement('span'); r1.className = 'ts-num'; r1.textContent = 'RETO DEL DÍA';
+    const r2 = document.createElement('strong'); r2.textContent = mod.nombre;
     const r3 = document.createElement('small'); r3.textContent = mod.desc + ' Igual para todos hoy.';
     const r4 = document.createElement('small'); r4.className = 'ts-mejor'; r4.textContent = mejorHoy ? 'Tu mejor hoy: ' + mejorHoy.toLocaleString('es-CO') : '¡Todavía no lo juegas hoy!';
     reto.append(r1, r2, r3, r4);
@@ -211,7 +211,7 @@
     inf.type = 'button';
     inf.className = 'tarjeta-sector infinito';
     const n1 = document.createElement('span'); n1.className = 'ts-num'; n1.textContent = 'SIN FIN';
-    const n2 = document.createElement('strong'); n2.textContent = '♾️ Infinito';
+    const n2 = document.createElement('strong'); n2.textContent = 'Infinito';
     const n3 = document.createElement('small'); n3.textContent = 'Oleadas cada vez más difíciles. ¡Bate tu récord!';
     const n4 = document.createElement('small'); n4.className = 'ts-mejor'; n4.textContent = 'Récord: ' + GS.Progreso.mejor(st.tipoElegido).toLocaleString('es-CO');
     inf.append(n1, n2, n3, n4);
@@ -230,21 +230,21 @@
     const P = GS.Progreso;
     if (pestanaPerfil === 'logros') {
       const hechos = P.LOGROS.filter((l) => P.logrado(l.id)).length;
-      $('txtPerfilResumen').textContent = '🏅 ' + hechos + ' de ' + P.LOGROS.length + ' logros';
+      $('txtPerfilResumen').textContent = '' + hechos + ' de ' + P.LOGROS.length + ' logros';
       const grid = document.createElement('div');
       grid.className = 'grid-logros';
       P.LOGROS.forEach((l) => {
         const d = document.createElement('div');
         d.className = 'logro' + (P.logrado(l.id) ? ' hecho' : '');
-        const i = document.createElement('span'); i.className = 'logro-ico'; i.textContent = P.logrado(l.id) ? l.icono : '🔒';
         const t = document.createElement('strong'); t.textContent = l.nombre;
         const x = document.createElement('small'); x.textContent = l.desc;
-        d.append(i, t, x);
+        const e = document.createElement('span'); e.className = 'logro-estado'; e.textContent = P.logrado(l.id) ? '★ LOGRADO' : 'BLOQUEADO';
+        d.append(e, t, x);
         grid.appendChild(d);
       });
       cont.appendChild(grid);
     } else if (pestanaPerfil === 'records') {
-      $('txtPerfilResumen').textContent = '🏆 Top 10 del modo Infinito en este dispositivo';
+      $('txtPerfilResumen').textContent = 'Top 10 del modo Infinito en este dispositivo';
       const cols = document.createElement('div');
       cols.className = 'cols-records';
       ['ar', 'esquiva'].forEach((tipo) => {
@@ -258,13 +258,13 @@
         top.forEach((r) => { const li = document.createElement('li'); const a = document.createElement('span'); a.textContent = r.n; const b = document.createElement('b'); b.textContent = r.p.toLocaleString('es-CO'); li.append(a, b); lista.appendChild(li); });
         c.appendChild(lista);
         if (P.global.activo()) {
-          const h2 = document.createElement('h4'); h2.textContent = '🌎 Mundial';
+          const h2 = document.createElement('h4'); h2.textContent = 'Mundial';
           const lg = document.createElement('ol'); lg.className = 'mundial';
           const cargando = document.createElement('li'); cargando.className = 'vacio'; cargando.textContent = 'Cargando…'; lg.appendChild(cargando);
           c.append(h2, lg);
           P.global.leer(tipo).then((filas) => {
             lg.innerHTML = '';
-            if (!filas || !filas.length) { const li = document.createElement('li'); li.className = 'vacio'; li.textContent = filas ? 'Sé el primero 🚀' : 'Sin conexión'; lg.appendChild(li); return; }
+            if (!filas || !filas.length) { const li = document.createElement('li'); li.className = 'vacio'; li.textContent = filas ? 'Sé el primero' : 'Sin conexión'; lg.appendChild(li); return; }
             filas.forEach((r) => { const li = document.createElement('li'); const a = document.createElement('span'); a.textContent = r.n; const b = document.createElement('b'); b.textContent = r.p.toLocaleString('es-CO'); li.append(a, b); lg.appendChild(li); });
           });
         }
@@ -275,7 +275,7 @@
       const mod = GS.Reto.mod();
       const hr = document.createElement('h3');
       hr.className = 'titulo-reto';
-      hr.textContent = '📅 Reto de hoy: ' + mod.icono + ' ' + mod.nombre;
+      hr.textContent = 'Reto de hoy: ' + mod.nombre;
       cont.appendChild(hr);
       const colsR = document.createElement('div');
       colsR.className = 'cols-records';
@@ -296,7 +296,7 @@
           c.appendChild(lg);
           P.global.leer(GS.Reto.tipoGlobal(tipo), GS.Reto.inicioDelDia()).then((filas) => {
             lg.innerHTML = '';
-            if (!filas || !filas.length) { const x = document.createElement('li'); x.className = 'vacio'; x.textContent = filas ? 'Nadie lo ha jugado hoy 🚀' : 'Sin conexión'; lg.appendChild(x); return; }
+            if (!filas || !filas.length) { const x = document.createElement('li'); x.className = 'vacio'; x.textContent = filas ? 'Nadie lo ha jugado hoy' : 'Sin conexión'; lg.appendChild(x); return; }
             filas.forEach((r) => { const x = document.createElement('li'); const a = document.createElement('span'); a.textContent = r.n; const b = document.createElement('b'); b.textContent = r.p.toLocaleString('es-CO'); x.append(a, b); lg.appendChild(x); });
           });
         }
@@ -309,7 +309,7 @@
         cont.appendChild(n);
       }
     } else {
-      $('txtPerfilResumen').textContent = '🚀 Hangar: elige el color de tu nave y de tu láser';
+      $('txtPerfilResumen').textContent = 'Hangar: elige el color de tu nave y de tu láser';
       const grid = document.createElement('div');
       grid.className = 'grid-naves';
       P.NAVES.forEach((n) => {
@@ -325,7 +325,7 @@
         muestra.style.boxShadow = '0 0 14px rgb(' + n.laser + ')';
         const t = document.createElement('strong'); t.textContent = n.nombre;
         const req = n.requiere ? P.LOGROS.find((l) => l.id === n.requiere) : null;
-        const x = document.createElement('small'); x.textContent = ok ? (P.nave().id === n.id ? '✔ En uso' : 'Toca para usar') : '🔒 Logro: ' + (req ? req.nombre : '');
+        const x = document.createElement('small'); x.textContent = ok ? (P.nave().id === n.id ? 'En uso' : 'Toca para usar') : 'Bloqueada · Logro: ' + (req ? req.nombre : '');
         b.append(muestra, t, x);
         b.addEventListener('click', () => { A.clic(); P.elegirNave(n.id); abrirPerfil('naves'); });
         grid.appendChild(b);
@@ -374,7 +374,7 @@
     $('btnRepetirTutorial').addEventListener('click', () => {
       A.clic();
       GS.Tutorial.olvidar();
-      toast('🎓 El tutorial volverá a salir en tu próxima partida.', 2600);
+      toast('El tutorial volverá a salir en tu próxima partida.', 2600);
     });
     Aj.alCambiar((k, v) => {
       if (k === 'zurdo') document.body.classList.toggle('zurdo', !!v);
@@ -389,9 +389,8 @@
     A.logro();
     const naves = GS.Progreso.NAVES.filter((n) => n.requiere === l.id);
     const caja = $('logroToast');
-    $('logroIcono').textContent = l.icono;
     $('logroNombre').textContent = l.nombre;
-    $('logroExtra').textContent = naves.length ? '🚀 Nave desbloqueada: ' + naves[0].nombre : l.desc;
+    $('logroExtra').textContent = naves.length ? 'Nave desbloqueada: ' + naves[0].nombre : l.desc;
     caja.classList.remove('oculto', 'entra');
     void caja.offsetWidth;
     caja.classList.add('entra');

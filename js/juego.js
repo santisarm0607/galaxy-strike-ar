@@ -227,7 +227,7 @@
     if (J.tipoJuego === 'esquiva') { GS.Esquiva.recibirAtaque(nombre, n); return; }
     if (J.estado !== 'jugando' || !J.vivo) return;
     for (let i = 0; i < n; i++) J.ataques.push(0.8 + i * 0.85);
-    emitir('aviso', '☄️ ¡' + nombre + ' te lanzó meteoros!', 'peligro');
+    emitir('aviso', '¡' + nombre + ' te lanzó meteoros!', 'peligro');
     GS.Sonido.ataque();
   };
 
@@ -239,7 +239,7 @@
     J.invul = 3;
     J.finEn = -1;
     emitir('vidas');
-    emitir('aviso', '💚 ¡De vuelta a la batalla!', 'exito');
+    emitir('aviso', '¡De vuelta a la batalla!', 'exito');
     GS.Sonido.poder();
   };
 
@@ -564,7 +564,7 @@
           e.alertado = true;
           J.alertaT = 1.3;
           GS.Sonido.alerta();
-          emitir('aviso', '☄️ ¡ESQUIVA! ' + GS.Sensores.textoEsquivar(), 'peligro');
+          emitir('aviso', '¡ESQUIVA! ' + GS.Sensores.textoEsquivar(), 'peligro');
         }
       }
     }
@@ -908,7 +908,7 @@
       // El Rompe-rocas cerró su coraza: los disparos rebotan
       chispas(e.pos, ['#c9a27a', '#ffffff'], 6);
       GS.Sonido.rebote();
-      if (!e.avisoBlindado || J.tTotal - e.avisoBlindado > 2) { e.avisoBlindado = J.tTotal; J.textosPantalla.push({ txt: '🪨 ¡BLINDADO! Espera a que se abra', c: '#e8c39e', t: 0, vida: 0.9 }); }
+      if (!e.avisoBlindado || J.tTotal - e.avisoBlindado > 2) { e.avisoBlindado = J.tTotal; J.textosPantalla.push({ txt: '¡BLINDADO! Espera a que se abra', c: '#e8c39e', t: 0, vida: 0.9 }); }
       return;
     }
     if (!porBomba) { J.aciertos++; J.marcaGolpe = 0.16; }
@@ -958,7 +958,7 @@
       J.flashColor = '255,255,255';
       for (let i = 0; i < 5; i++) J.explosionesJefe.push({ t: 0.12 + i * 0.22, pos: V.add(e.pos, [U.rand(-2, 2), U.rand(-1, 1), U.rand(-1, 1)]) });
       if (J.vidas < J.vidasMax) { J.vidas++; emitir('vidas'); }
-      emitir('aviso', e.def.muerte + ' +1 ❤', 'exito');
+      emitir('aviso', e.def.muerte + ' +1 ❤︎', 'exito');
       if (J.modo === 'online') emitir('ataque', 5);
       GS.Musica.tocar('juego');
     }
@@ -968,7 +968,7 @@
     const d = GS.Poderes.TIPOS[e.poder];
     chispas(e.pos, [d.css, '#ffffff'], 18);
     GS.Poderes.activar(e.poder);
-    J.textosPantalla.push({ txt: d.icono + ' ' + d.nombre.toUpperCase(), c: d.css, t: 0, vida: 1.2 });
+    J.textosPantalla.push({ txt: d.nombre.toUpperCase(), c: d.css, t: 0, vida: 1.2 });
     if (J.tutorial) emitir('tutPoder');
   }
 
@@ -993,7 +993,7 @@
       J.flash = 0.35;
       J.flashColor = '56,248,255';
       GS.Sonido.escudo();
-      J.textosPantalla.push({ txt: '🛡️ ¡EL ESCUDO TE SALVÓ!', c: '#38f8ff', t: 0, vida: 1.1 });
+      J.textosPantalla.push({ txt: '¡EL ESCUDO TE SALVÓ!', c: '#38f8ff', t: 0, vida: 1.1 });
       return true;
     }
     if (J.tutorial) { J.flash = 0.4; J.flashColor = '255,0,40'; GS.Sonido.danio(); J.invul = 1; return true; }
@@ -1298,8 +1298,7 @@
     for (const e of J.entidades) {
       if (e.tipo !== 'capsula' || !visible(e)) continue;
       const p = e.proy;
-      ctx.font = Math.round(U.clamp(e.radio * p.k * 0.9, 12, 40)) + 'px sans-serif';
-      ctx.fillText(GS.Poderes.TIPOS[e.poder].icono, p.x, p.y);
+      dibujarIconoPoder(ctx, GS.Poderes.TIPOS[e.poder], p.x, p.y, e.radio * p.k);
     }
     // Punto débil del jefe en la fase 3
     const jf = J.jefe;
@@ -1486,7 +1485,7 @@
       }
       case 'capsula': {
         // Cápsula de poder (dibujo 2D de respaldo)
-        const d = GS.Poderes.TIPOS[e.poder] || { css: '#ffffff', icono: '⚡' };
+        const d = GS.Poderes.TIPOS[e.poder] || { css: '#ffffff', corto: '?' };
         const w = r * 3.2 * (1 + Math.sin(e.t * 6) * 0.1);
         ctx.globalCompositeOperation = 'lighter';
         ctx.drawImage(SP.brilloVerde, -w / 2, -w / 2, w, w);
@@ -1497,8 +1496,7 @@
         ctx.beginPath(); ctx.arc(0, 0, r * 0.95, 0, TAU); ctx.fill(); ctx.stroke();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.font = Math.round(U.clamp(r * 1.1, 12, 44)) + 'px sans-serif';
-        ctx.fillText(d.icono, 0, 1);
+        dibujarIconoPoder(ctx, d, 0, 1, r * 1.2);
         break;
       }
       case 'meteoro': {
@@ -1608,6 +1606,20 @@
       g.fillRect(0, 0, W, H);
     }
   };
+
+  /** Nombre corto del poder escrito sobre la cápsula (ESCUDO, x2, BOMBA…). */
+  function dibujarIconoPoder(g, d, x, y, tam) {
+    g.save();
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = '800 ' + Math.round(U.clamp(tam * (d.corto.length > 3 ? 0.36 : 0.6), 8, 22)) + 'px Orbitron, sans-serif';
+    g.fillStyle = '#ffffff';
+    g.shadowColor = d.css;
+    g.shadowBlur = 8;
+    g.fillText(d.corto, x, y);
+    g.restore();
+  }
+  J.dibujarIconoPoder = dibujarIconoPoder;
 
   /** Arcos en el borde que señalan de dónde vino cada golpe. */
   function dibujarMarcasGolpe(g, W, H) {

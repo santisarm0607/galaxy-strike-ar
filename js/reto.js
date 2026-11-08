@@ -12,11 +12,11 @@
 
   /** Los modificadores posibles (sale uno cada día). */
   R.MODS = [
-    { id: 'meteoros', icono: '☄️', nombre: 'Lluvia de meteoros', desc: 'Caen el doble de meteoros.' },
-    { id: 'fragil', icono: '💔', nombre: 'Frágil', desc: 'Solo tienes 3 vidas.' },
-    { id: 'poderes', icono: '⚡', nombre: 'Poderes de sobra', desc: 'Salen el doble de cápsulas de poder.' },
-    { id: 'turbo', icono: '🚀', nombre: 'Turbo', desc: 'Todo va 20 % más rápido, y da 20 % más puntos.' },
-    { id: 'jefes', icono: '👑', nombre: 'Directo al jefe', desc: 'Empiezas justo antes del primer jefe.' }
+    { id: 'meteoros', nombre: 'Lluvia de meteoros', desc: 'Caen el doble de meteoros.' },
+    { id: 'fragil', nombre: 'Frágil', desc: 'Solo tienes 3 vidas.' },
+    { id: 'poderes', nombre: 'Poderes de sobra', desc: 'Salen el doble de cápsulas de poder.' },
+    { id: 'turbo', nombre: 'Turbo', desc: 'Todo va 20 % más rápido, y da 20 % más puntos.' },
+    { id: 'jefes', nombre: 'Directo al jefe', desc: 'Empiezas justo antes del primer jefe.' }
   ];
 
   const dos = (n) => (n < 10 ? '0' : '') + n;

@@ -1,7 +1,7 @@
 /* =========================================================
    GALAXY STRIKE AR — ui/sala.js
    Multijugador en línea: sala, marcador en vivo, resultados,
-   mensajes de la red y reacciones (emojis).
+   mensajes de la red y reacciones rápidas.
    Los módulos de la interfaz comparten GS.UI.k (funciones) y
    GS.UI.k.st (estado). Ver js/interfaz.js.
    ========================================================= */
@@ -25,13 +25,13 @@
     const cont = $('finContenido');
     cont.innerHTML = '';
     const lista = ordenarEstados();
-    const medallas = ['🥇', '🥈', '🥉', '4°'];
+    const medallas = ['1°', '2°', '3°', '4°'];
     if (Sala.coop) {
       const total = lista.reduce((a, j) => a + j.puntos, 0);
       const logrado = total >= Sala.meta;
       const t = document.createElement('p');
       t.className = 'ganador';
-      t.textContent = logrado ? '🤝 ¡MISIÓN CUMPLIDA!' : 'Casi… les faltaron ' + (Sala.meta - total).toLocaleString('es-CO') + ' puntos';
+      t.textContent = logrado ? '¡MISIÓN CUMPLIDA!' : 'Casi… les faltaron ' + (Sala.meta - total).toLocaleString('es-CO') + ' puntos';
       cont.appendChild(t);
       cont.appendChild(fila('Puntos del equipo', total.toLocaleString('es-CO') + ' / ' + Sala.meta.toLocaleString('es-CO'), true));
       if (logrado && !Sala.logroCoop) { Sala.logroCoop = true; GS.Progreso.evento('metaCoop'); }
@@ -47,7 +47,7 @@
       const d = document.createElement('div');
       d.className = 'fila-ranking' + (j.id === R.miId ? ' yo' : '');
       const a = document.createElement('span');
-      a.textContent = (Sala.coop ? (i === 0 ? '⭐ ' : '🛸 ') : (medallas[i] || i + 1 + '°') + '  ') + j.nombre + (j.id === R.miId ? ' (tú)' : '') + (Sala.coop && i === 0 ? ' · MVP' : '');
+      a.textContent = (Sala.coop ? '' : (medallas[i] || i + 1 + '°') + '  ') + j.nombre + (j.id === R.miId ? ' (tú)' : '') + (Sala.coop && i === 0 ? ' · MVP' : '');
       const b = document.createElement('b');
       b.textContent = j.puntos.toLocaleString('es-CO');
       d.append(a, b);
@@ -66,7 +66,7 @@
     if (J.modo !== 'online' && document.body.dataset.partida !== 'online') return;
     if (Sala.coop) {
       const total = Object.keys(Sala.estados).reduce((a, id) => a + (Sala.estados[id].puntos || 0), 0);
-      $('txtEquipo').textContent = '🤝 EQUIPO ' + total.toLocaleString('es-CO') + ' / ' + Sala.meta.toLocaleString('es-CO');
+      $('txtEquipo').textContent = 'EQUIPO ' + total.toLocaleString('es-CO') + ' / ' + Sala.meta.toLocaleString('es-CO');
       $('barraEquipo').style.width = Math.min(100, Math.round((total / Math.max(1, Sala.meta)) * 100)) + '%';
     }
     ordenarEstados().forEach((j, i) => {
@@ -75,7 +75,7 @@
       const a = document.createElement('span');
       a.textContent = i + 1 + '. ' + j.nombre + (j.salio ? ' (salió)' : '');
       const b = document.createElement('b');
-      b.textContent = (j.vivo || j.salio ? '' : '💀 ') + j.puntos.toLocaleString('es-CO');
+      b.textContent = (j.vivo || j.salio ? '' : 'FUERA · ') + j.puntos.toLocaleString('es-CO');
       d.append(a, b);
       cont.appendChild(d);
     });
@@ -135,7 +135,7 @@
     ul.innerHTML = '';
     Sala.jugadores.forEach((j) => {
       const li = document.createElement('li');
-      li.textContent = (j.host ? '👑 ' : '🛸 ') + j.nombre + (j.id === R.miId ? ' (tú)' : '');
+      li.textContent = j.nombre + (j.id === R.miId ? ' (tú)' : '') + (j.host ? ' · anfitrión' : '');
       ul.appendChild(li);
     });
     for (let i = Sala.jugadores.length; i < MAX_JUGADORES; i++) {
@@ -150,7 +150,7 @@
       : 'Esperando a que el anfitrión empiece la partida…';
     $('btnCompartir').classList.toggle('oculto', typeof navigator.share !== 'function');
     $('txtModoSala').textContent = 'Modo: ' + NOMBRE_TIPO[Sala.tipo];
-    $('btnTipoPartida').textContent = Sala.coop ? '🤝 Cooperativo: sumen puntos juntos' : '⚔️ Competencia: gana el que más puntos haga';
+    $('btnTipoPartida').textContent = Sala.coop ? 'Cooperativo: sumen puntos juntos' : 'Competencia: gana el que más puntos haga';
     $('btnTipoPartida').disabled = !R.esHost;
     $('btnTipoPartida').classList.toggle('solo-lectura', !R.esHost);
     // Sala de Disparos AR en un celular que aún no activó cámara y sensores
@@ -295,7 +295,7 @@
           if (Sala.jugadores.length >= MAX_JUGADORES) { R.enviar({ t: 'llena', para: de }); return; }
           const nuevo = { id: de, nombre: limpiarNombre(msg.nombre), host: false };
           Sala.jugadores.push(nuevo);
-          toast('🛸 ' + nuevo.nombre + ' se unió a la sala');
+          toast('' + nuevo.nombre + ' se unió a la sala');
           A.clic();
         }
         difundirLobby();
@@ -341,7 +341,7 @@
       case 'ayuda':
         if (de && de !== R.miId && J.modo === 'online' && Sala.coop && J.estado === 'jugando' && J.vivo) {
           GS.Poderes.activar('escudo');
-          aviso('🛡️ ¡' + limpiarNombre(msg.nombre) + ' te mandó un escudo!', 'exito');
+          aviso('¡' + limpiarNombre(msg.nombre) + ' te mandó un escudo!', 'exito');
         }
         break;
       case 'emoji':
@@ -357,8 +357,8 @@
     }
   });
 
-  /* ---------------- Reacciones (emojis en línea) ---------------- */
-  const EMOJIS = ['🔥', '😂', '😱', '👏'];
+  /* ---------------- Reacciones rápidas (texto) ---------------- */
+  const EMOJIS = ['¡BIEN!', 'JAJA', '¡UY!', 'GG']; // reacciones rápidas (texto)
   let ultimoEmoji = 0;
   function mostrarReaccion(quien, i) {
     const cont = $('reacciones');
@@ -378,7 +378,7 @@
       const b = document.createElement('button');
       b.type = 'button';
       b.textContent = em;
-      b.setAttribute('aria-label', 'Reacción ' + em);
+      b.setAttribute('aria-label', 'Reacción: ' + em);
       const enviar = (ev) => {
         ev.preventDefault();
         ev.stopPropagation();

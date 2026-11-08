@@ -9,12 +9,12 @@
   const P = (GS.Poderes = {});
 
   P.TIPOS = {
-    escudo: { icono: '🛡️', nombre: 'Escudo', dur: 15, css: '#38f8ff', rgb: [0.3, 0.9, 1], modos: ['ar', 'esquiva'], desc: 'Aguanta un golpe' },
-    lento:  { icono: '⏳', nombre: 'Cámara lenta', dur: 6, css: '#c77dff', rgb: [0.75, 0.5, 1], modos: ['ar', 'esquiva'], desc: 'Todo va más lento' },
-    doble:  { icono: '✨', nombre: 'Puntos x2', dur: 10, css: '#ffd23f', rgb: [1, 0.85, 0.25], modos: ['ar', 'esquiva'], desc: 'Puntos dobles' },
-    rafaga: { icono: '🔥', nombre: 'Ráfaga', dur: 8, css: '#ff8a3d', rgb: [1, 0.5, 0.15], modos: ['ar'], desc: 'Disparas mucho más rápido' },
-    bomba:  { icono: '💣', nombre: 'Bomba', dur: 0, css: '#ff3355', rgb: [1, 0.2, 0.3], modos: ['ar'], desc: 'Destruye a los aliens que ves' },
-    iman:   { icono: '🧲', nombre: 'Imán', dur: 10, css: '#7CFF4F', rgb: [0.45, 1, 0.35], modos: ['esquiva'], desc: 'Atrae los cristales' }
+    escudo: { corto: 'ESCUDO', nombre: 'Escudo', dur: 15, css: '#38f8ff', rgb: [0.3, 0.9, 1], modos: ['ar', 'esquiva'], desc: 'Aguanta un golpe' },
+    lento:  { corto: 'LENTO', nombre: 'Cámara lenta', dur: 6, css: '#c77dff', rgb: [0.75, 0.5, 1], modos: ['ar', 'esquiva'], desc: 'Todo va más lento' },
+    doble:  { corto: 'x2', nombre: 'Puntos x2', dur: 10, css: '#ffd23f', rgb: [1, 0.85, 0.25], modos: ['ar', 'esquiva'], desc: 'Puntos dobles' },
+    rafaga: { corto: 'RÁFAGA', nombre: 'Ráfaga', dur: 8, css: '#ff8a3d', rgb: [1, 0.5, 0.15], modos: ['ar'], desc: 'Disparas mucho más rápido' },
+    bomba:  { corto: 'BOMBA', nombre: 'Bomba', dur: 0, css: '#ff3355', rgb: [1, 0.2, 0.3], modos: ['ar'], desc: 'Destruye a los aliens que ves' },
+    iman:   { corto: 'IMÁN', nombre: 'Imán', dur: 10, css: '#7CFF4F', rgb: [0.45, 1, 0.35], modos: ['esquiva'], desc: 'Atrae los cristales' }
   };
 
   const activos = {}; // tipo → segundos que quedan
@@ -83,7 +83,8 @@
         chip.style.setProperty('--c', d.css);
         chip.dataset.tipo = k;
         const ico = document.createElement('span');
-        ico.textContent = d.icono;
+        ico.textContent = d.corto;
+        ico.className = 'corto';
         const barra = document.createElement('i');
         chip.append(ico, barra);
         cont.appendChild(chip);
