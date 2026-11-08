@@ -58,7 +58,8 @@
   let tSpawn = 0, tCristal = 0, tFormacion = 0, tLaser = 0, tAnillo = 0, tCapsula = 0, acumPuntos = 0, tAvisoPuntos = 0;
   let impulsoEnfr = 0, impulsoT = 0, finEn = -1, victoriaEn = -1, sueloOffset = 0;
   let porPoco = 0, cristales = 0, anillos = 0, jefeSuperado = false;
-  let derribos = 0, rayosJ = [], enfrMano = {}; // control con cámara
+  let derribos = 0, rayosJ = [], enfrMano = {}, fogonazos = {}; // control con cámara
+  let jefesVistos = 0, offsetNivel = 0; // reto «Directo al jefe»: empieza más adelante
   E.camara = false;
   let sector = null, tema = null;
   let camQ = Q.identidad(), camInv = Q.identidad(), camPos = [0, 1.5, 8.5];
@@ -88,7 +89,7 @@
   /** Deja la nave lista (se ve durante la cuenta regresiva). */
   E.preparar = function () {
     Object.assign(nave, { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, t: 0 });
-    obs = []; items = []; parts = []; textos = []; ataques = []; rayosJ = []; enfrMano = {};
+    obs = []; items = []; parts = []; textos = []; ataques = []; rayosJ = []; enfrMano = {}; fogonazos = {};
     jefe = null; impulsoT = 0; impulsoEnfr = 0;
     if (!rayas.length) crearRayas();
   };
@@ -105,9 +106,10 @@
     tema = (sector || GS.Sectores.lista[0]).tema;
     nivel = 1; tiempoVivo = 0; tSector = 0;
     vel = (sector ? sector.esquiva.vel : CFG.velBase) * J.dif.velocidad;
-    tSpawn = 1.2; tCristal = 2; tFormacion = 10; tLaser = 6; tAnillo = 4; tCapsula = 12;
+    tSpawn = 1.2; tCristal = 2; tFormacion = 10; tLaser = 6; tAnillo = 4; tCapsula = J.esReto('poderes') ? 6 : 12;
+    offsetNivel = J.esReto('jefes') && !opc.sector ? (CFG.jefeCada - 1) * CFG.segundosPorNivel - 6 : 0;
     acumPuntos = 0; tAvisoPuntos = 0; finEn = -1; victoriaEn = -1;
-    porPoco = 0; cristales = 0; anillos = 0; jefeSuperado = false; derribos = 0;
+    porPoco = 0; cristales = 0; anillos = 0; jefeSuperado = false; derribos = 0; jefesVistos = 0;
     if (opc.tutorial || J.tutorial) { tSpawn = Infinity; tCristal = Infinity; tFormacion = Infinity; tLaser = Infinity; tAnillo = Infinity; tCapsula = Infinity; }
     J.oleada = 1;
     J.tema = tema;
@@ -120,7 +122,7 @@
   E.progreso = function () {
     if (J.tutorial) return 'TUTORIAL';
     if (sector) {
-      if (jefe) return 'SECTOR ' + sector.id + ' · NAVE NODRIZA';
+      if (jefe) return 'SECTOR ' + sector.id + ' · ' + jefe.def.nombre;
       return 'SECTOR ' + sector.id + ' · ' + Math.max(0, Math.ceil(CFG.segundosSector - tSector)) + 's';
     }
     return 'NIVEL ' + nivel;
@@ -129,7 +131,8 @@
   /** Solo para pruebas: saltar a un momento de la partida y ver el estado. */
   E.depurar = {
     tiempo: (s) => { tiempoVivo = s; tSector = s; },
-    estado: () => ({ nave: { ...nave }, obs: obs.map((e) => ({ tipo: e.tipo, x: e.x, y: e.y, z: e.z, radio: e.radio })), items: items.length, jefe: !!jefe, fase: jefe ? jefe.fase : 0, vel, nivel })
+    estado: () => ({ nave: { ...nave }, obs: obs.map((e) => ({ tipo: e.tipo, x: e.x, y: e.y, z: e.z, radio: e.radio })), items: items.length, jefe: !!jefe, fase: jefe ? jefe.fase : 0, vel, nivel }),
+    jefe: () => jefe
   };
 
   /* ---------------- Controles ---------------- */
@@ -152,7 +155,8 @@
   E.usarCamara = function (on) { E.camara = !!on; enfrMano = {}; };
 
   /** Disparo con la mano hacia un punto de la pantalla (sx, sy en píxeles). */
-  E.dispararA = function (sx, sy) {
+  E.dispararA = function (sx, sy, ayuda) {
+    const ay = ayuda || CFG.ayudaMira;
     if (!C || J.estado !== 'jugando' || !J.vivo) return null;
     // Rayo desde la cámara que pasa por ese punto de la pantalla
     const dir = Q.rotar(camQ, V.norm([(sx - C.W / 2) / FE, -(sy - C.H / 2) / FE, -1]));
@@ -162,13 +166,13 @@
       if (e.z < -115 || e.z > 1) continue;
       const p = proyectar([e.x, e.y, e.z]);
       if (p.detras) continue;
-      const r = Math.max(e.radio * p.k * 1.25, CFG.ayudaMira);
+      const r = Math.max(e.radio * p.k * 1.25, ay);
       if (Math.hypot(p.x - sx, p.y - sy) < r && e.z > mejorZ) { mejor = e; mejorZ = e.z; }
     }
     let golpeJefe = false;
     if (jefe && jefe.t < jefe.dur && jefe.entrada > 0.6 && (!mejor || jefe.z > mejorZ)) {
       const p = proyectar([jefe.x, jefe.y, jefe.z]);
-      if (!p.detras && Math.hypot(p.x - sx, p.y - sy) < Math.max(4.2 * p.k * 0.75, CFG.ayudaMira)) golpeJefe = true;
+      if (!p.detras && Math.hypot(p.x - sx, p.y - sy) < Math.max(4.2 * p.k * 0.75, ay)) golpeJefe = true;
     }
     const origen = [nave.x, nave.y + 0.1, -0.8];
     let fin;
@@ -184,6 +188,7 @@
       explosion([jefe.x + U.rand(-1, 1), jefe.y - 0.5, jefe.z + 2], 'orbe', 8);
       GS.Sonido.impacto();
       if (jefe.vida <= 0) jefeVencido(true);
+      else J.vibrar('disparo');
       return 'jefe';
     }
     if (!mejor) return null;
@@ -195,6 +200,8 @@
     }
     mejor.muerto = true;
     derribos++;
+    J.congelar(0.045);
+    J.vibrar('kill');
     explosion([mejor.x, mejor.y, mejor.z], mejor.tipo, 22);
     GS.Sonido.explosion(false);
     sumarCombo();
@@ -204,15 +211,27 @@
     return 'marciano';
   };
 
+  /** Punto de la pantalla al que apunta la mira de una mano. La mano piloto (modo «solo manos») dispara al frente de la nave. */
+  function puntoMira(m) {
+    if (m.piloto) {
+      const p = proyectar([nave.x, nave.y + 0.3, -32]);
+      if (!p.detras) return [p.x, p.y];
+    }
+    return [m.x * C.W, m.y * C.H];
+  }
+
   /** Cada cuadro: las manos en forma de pistola con el gatillo abajo disparan. */
   function disparosCamara(dt) {
     for (const id in enfrMano) enfrMano[id] -= dt;
+    for (const id in fogonazos) fogonazos[id] -= dt;
     if (!E.camara || !GS.Cuerpo || !J.vivo) return;
     for (const m of GS.Cuerpo.manos) {
       if (!m.gatillo) continue;
       if ((enfrMano[m.id] || 0) > 0) continue;
       enfrMano[m.id] = CFG.cadenciaCamara;
-      E.dispararA(m.x * C.W, m.y * C.H);
+      fogonazos[m.id] = 0.22; // la mira «se dispara» y se ve
+      const [sx, sy] = puntoMira(m);
+      E.dispararA(sx, sy, m.piloto ? 70 : 0);
     }
   }
   E.impulso = function () {
@@ -230,6 +249,7 @@
     impulsoT = CFG.impulsoDuracion;
     impulsoEnfr = CFG.impulsoEnfriamiento;
     GS.Sonido.impulso();
+    J.vibrar('impulso');
     if (J.tutorial) J.emitir('tutImpulso');
   };
 
@@ -269,7 +289,9 @@
     const apuntado = d < 0.35; // algunos vienen directo hacia donde estás
     const x = apuntado ? U.clamp(nave.x + (b - 0.5) * 2, -LX, LX) : (b * 2 - 1) * LX;
     const y = apuntado ? U.clamp(nave.y + (c - 0.5) * 1.6, -LY, LY) : (c * 2 - 1) * LY;
-    const tipo = elegirTipo(config().pesos, a);
+    let pesos = config().pesos;
+    if (J.esReto('meteoros')) pesos = Object.assign({}, pesos, { meteoro: (pesos.meteoro || 0) * 2 + 3 });
+    const tipo = elegirTipo(pesos, a);
     const o = { tipo, x, y, x0: x, y0: y, z: -CFG.distanciaAparicion, t: 0, fase: f * TAU, extra: 0 };
     if (tipo === 'dron' || tipo === 'teleport') { o.radio = 0.85; o.extra = 4; }
     else if (tipo === 'ovni') { o.radio = 1.15; o.extra = 1; }
@@ -342,19 +364,37 @@
   }
 
   function llegaJefe(fases, dur) {
-    jefe = { x: 0, y: 5.2, z: -120, t: 0, dur, fases, fase: 1, tDisparo: 2.5, tLaser: 2, entrada: 0, golpe: 0,
-      vida: CFG.vidaJefeBase + CFG.vidaJefePorFase * fases, // solo importa con el control de cámara
-      colores: sector ? JEFE_COLORES[sector.id] : JEFE_COLORES[1 + (Math.floor((nivel - 1) / 2) % 4)] };
+    jefesVistos++;
+    const def = sector ? GS.Jefes.get(sector.id) : GS.Jefes.turno(jefesVistos);
+    jefe = { def, x: 0, y: def.id === 'coloso' ? 4.4 : 5.2, z: -120, t: 0, dur, fases, fase: 1, tDisparo: 2.5, tLaser: 2, entrada: 0, golpe: 0,
+      tRoca: 1.5, tCortina: 3, tSalto: 3, alfa: 1, saltando: 0, x0: 0, lado: 1, tRefuerzo: 4,
+      vida: CFG.vidaJefeBase + CFG.vidaJefePorFase * fases }; // la vida solo importa con el control de cámara
     GS.Sonido.alerta();
     GS.Musica.tocar('jefe');
-    J.emitir('aviso', '⚠️ ¡NAVE NODRIZA! Aguanta ' + dur + ' segundos', 'peligro');
+    J.emitir('aviso', '⚠️ ¡' + def.nombre + '! Aguanta ' + dur + ' segundos', 'peligro');
   }
-  const JEFE_COLORES = {
-    1: null,
-    2: { disco: [0.78, 0.48, 0.26], domo: [0.42, 0.2, 0.08] },
-    3: { disco: [0.32, 0.72, 0.36], domo: [0.1, 0.34, 0.16] },
-    4: { disco: [0.72, 0.16, 0.26], domo: [0.3, 0.05, 0.12] }
-  };
+
+  /** Roca que lanza el Rompe-rocas (se mueve con su propia velocidad, como los orbes). */
+  function lanzarRoca(origen, obj, rap, radio) {
+    const dir = V.norm(V.sub(obj, origen));
+    obs.push({ tipo: 'roca', x: origen[0], y: origen[1], z: origen[2], vx: dir[0] * rap, vy: dir[1] * rap, vz: dir[2] * rap, t: 0,
+      radio: radio || 0.9, extra: 0, vari: (Math.random() * 3) | 0, vrot: 1.5 + Math.random() * 2,
+      q: Q.normalizar([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5, 1]), eje: V.norm([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5]) });
+  }
+
+  /** Fila de rocas u orbes a tu altura, con un hueco por donde pasar. */
+  function filaConHueco(tipo) {
+    const r = J.rng;
+    const y = U.clamp(nave.y + (r() - 0.5) * 1.2, -LY, LY);
+    const hueco = (r() * 2 - 1) * (LX - 1.8);
+    const z = jefe.z + 4, rap = vel + 12;
+    for (let x = -LX; x <= LX + 0.01; x += 1.45) {
+      if (Math.abs(x - hueco) < 1.7) continue;
+      if (tipo === 'roca') lanzarRoca([x, y, z], [x, y, 10], rap, 0.75);
+      else obs.push({ tipo: 'orbe', x, y, z, vx: 0, vy: 0, vz: rap, t: 0, radio: 0.42, extra: 0 });
+    }
+    GS.Sonido.alerta();
+  }
 
   /* ---------------- Actualización ---------------- */
   E.actualizar = function (dt) {
@@ -364,7 +404,8 @@
     const enJuego = J.estado === 'jugando';
     nave.t += dt;
     moverNave(dt);
-    const lenta = GS.Poderes.escalaTiempo();
+    const hs = enJuego ? J.pasoSensacion(dt) : 1; // micro-pausa al golpear
+    const lenta = GS.Poderes.escalaTiempo() * hs;
     const vFondo = (enJuego ? vel : 10) * lenta;
     for (const s of rayas) {
       s.z += vFondo * 1.4 * dt;
@@ -372,7 +413,7 @@
     }
     sueloOffset = (sueloOffset + vFondo * dt) % 5;
     actualizarCamara();
-    actualizarEfectos(dt);
+    actualizarEfectos(dt * hs);
     if (!enJuego) return;
 
     const dtM = dt * lenta; // tiempo del mundo (la cámara lenta frena a los marcianos)
@@ -407,7 +448,7 @@
           GS.Musica.nivel(1 + Math.floor(f * 2.5));
         }
       } else {
-        const n = 1 + Math.floor(tiempoVivo / CFG.segundosPorNivel);
+        const n = 1 + Math.floor((tiempoVivo + offsetNivel) / CFG.segundosPorNivel);
         if (n !== nivel) {
           nivel = n;
           J.oleada = n;
@@ -435,7 +476,7 @@
       tCristal -= dtM;
       while (tCristal <= 0) { aparecerCristal(); tCristal += J.rng.rango(1.8, 3.2); }
       tCapsula -= dtM;
-      while (tCapsula <= 0) { aparecerCapsula(); tCapsula += J.rng.rango(13, 19); }
+      while (tCapsula <= 0) { aparecerCapsula(); tCapsula += J.rng.rango(13, 19) * (J.esReto('poderes') ? 0.5 : 1); }
       if (cfg.anillos) {
         tAnillo -= dtM;
         while (tAnillo <= 0) { aparecerAnillo(); tAnillo += J.rng.rango(5, 8); }
@@ -468,8 +509,9 @@
     for (const e of obs) {
       e.t += dtM;
       const zPrev = e.z;
-      if (e.tipo === 'orbe') {
+      if (e.tipo === 'orbe' || e.tipo === 'roca') {
         e.x += e.vx * dtM; e.y += e.vy * dtM; e.z += e.vz * dtM;
+        if (e.tipo === 'roca') e.q = Q.normalizar(Q.mult(Q.eje(e.eje[0], e.eje[1], e.eje[2], e.vrot * dtM), e.q));
       } else {
         e.z += (vel + e.extra) * dtM;
         if (e.tipo === 'dron' && !e.formacion) {
@@ -545,7 +587,11 @@
     if (!jefe) return;
     jefe.t += dt;
     jefe.entrada = Math.min(1, jefe.entrada + dt * 0.5);
-    jefe.x = Math.sin(jefe.t * (0.6 + jefe.fase * 0.15)) * LX * 0.55;
+    const def = jefe.def;
+    if (def.id === 'medusa') moverMedusa(dt);
+    else if (def.id === 'coloso') jefe.x = Math.sin(jefe.t * (0.4 + jefe.fase * 0.1)) * LX * 0.4;
+    else if (def.id === 'emperador') jefe.x = Math.sin(jefe.t * 0.35) * LX * 0.45;
+    else jefe.x = Math.sin(jefe.t * (0.6 + jefe.fase * 0.15)) * LX * 0.55;
     if (jefe.t < jefe.dur) {
       jefe.z = -120 + 78 * U.easeOutBack(jefe.entrada); // llega volando hasta z = -42
       const fase = Math.min(jefe.fases, 1 + Math.floor((jefe.t / jefe.dur) * jefe.fases));
@@ -554,19 +600,26 @@
         J.sacudida = 0.6;
         GS.Sonido.alerta();
         GS.Musica.nivel(3);
-        J.emitir('aviso', fase === 2 ? '⚠️ ¡Dispara en abanico!' : '🔴 ¡Láseres! Busca el hueco', 'peligro');
+        J.congelar(0.1);
+        J.vibrar('jefeFase');
+        J.emitir('aviso', def.esquiva[fase] || def.esquiva[3], 'peligro');
       }
       if (!J.vivo) return;
       const cad = J.dif.cadenciaEnemiga;
-      jefe.tDisparo -= dtM;
-      if (jefe.tDisparo <= 0) {
-        if (jefe.fase === 1) { disparoJefe(0); jefe.tDisparo = 1.0 * cad; }
-        else if (jefe.fase === 2) { [-1.6, 0, 1.6].forEach((d) => disparoJefe(d)); jefe.tDisparo = 1.4 * cad; }
-        else { disparoJefe(0); jefe.tDisparo = 1.6 * cad; }
-      }
-      if (jefe.fase === 3) {
-        jefe.tLaser -= dtM;
-        if (jefe.tLaser <= 0) { laser(true); jefe.tLaser = 2.2 * cad; }
+      if (def.id === 'coloso') ataqueColoso(dtM, cad);
+      else if (def.id === 'medusa') ataqueMedusa(dtM, cad);
+      else if (def.id === 'emperador') ataqueEmperador(dtM, cad);
+      else {
+        jefe.tDisparo -= dtM;
+        if (jefe.tDisparo <= 0) {
+          if (jefe.fase === 1) { disparoJefe(0); jefe.tDisparo = 1.0 * cad; }
+          else if (jefe.fase === 2) { [-1.6, 0, 1.6].forEach((d) => disparoJefe(d)); jefe.tDisparo = 1.4 * cad; }
+          else { disparoJefe(0); jefe.tDisparo = 1.6 * cad; }
+        }
+        if (jefe.fase === 3) {
+          jefe.tLaser -= dtM;
+          if (jefe.tLaser <= 0) { laser(true); jefe.tLaser = 2.2 * cad; }
+        }
       }
     } else {
       jefe.y += dt * 6;
@@ -575,7 +628,91 @@
     }
   }
 
-  /** La nave nodriza se fue (sobreviviste) o la derribaste con la cámara (bonus). */
+  /** El Rompe-rocas: te lanza rocas y luego filas de rocas con un hueco. */
+  function ataqueColoso(dtM, cad) {
+    jefe.tRoca -= dtM;
+    if (jefe.tRoca <= 0) {
+      const origen = [jefe.x, jefe.y - 0.5, jefe.z + 2];
+      const obj = [U.clamp(nave.x + nave.vx * 0.3, -LX, LX), U.clamp(nave.y + nave.vy * 0.3, -LY, LY), 0];
+      lanzarRoca(origen, obj, vel + 9);
+      if (jefe.fase >= 3) lanzarRoca(origen, [U.clamp(obj[0] + U.rand(-3, 3), -LX, LX), obj[1], 0], vel + 9);
+      jefe.tRoca = (jefe.fase === 1 ? 1.25 : 1.6) * cad;
+    }
+    if (jefe.fase >= 2) {
+      jefe.tCortina -= dtM;
+      if (jefe.tCortina <= 0) { filaConHueco('roca'); jefe.tCortina = (jefe.fase === 3 ? 2.6 : 3.4) * cad; }
+    }
+  }
+
+  /** La Reina de la nebulosa: salta de lado a lado y lanza anillos y cortinas de plasma. */
+  function moverMedusa(dt) {
+    jefe.tSalto -= dt;
+    if (!jefe.saltando && jefe.tSalto <= 0) jefe.saltando = 1;
+    if (jefe.saltando === 1) {
+      jefe.alfa = Math.max(0, jefe.alfa - dt * 3.5);
+      if (jefe.alfa <= 0) {
+        explosion([jefe.x, jefe.y, jefe.z], 'teleport', 18);
+        jefe.x0 = U.clamp(-Math.sign(jefe.x0 || 1) * U.rand(0.3, 0.6) * LX, -LX * 0.6, LX * 0.6);
+        jefe.saltando = 2;
+        GS.Sonido.teleport();
+      }
+    } else if (jefe.saltando === 2) {
+      jefe.alfa = Math.min(1, jefe.alfa + dt * 3);
+      if (jefe.alfa >= 1) { jefe.saltando = 0; jefe.tSalto = jefe.fase === 3 ? 1.8 : jefe.fase === 2 ? 2.6 : 3.4; }
+    }
+    jefe.x = U.lerp(jefe.x, jefe.x0 + Math.sin(jefe.t * 1.3) * 0.8, 1 - Math.exp(-dt * 8));
+  }
+
+  function ataqueMedusa(dtM, cad) {
+    if (jefe.alfa < 0.9) return;
+    jefe.tDisparo -= dtM;
+    if (jefe.tDisparo <= 0) {
+      // Anillo de orbes alrededor tuyo (quédate quieto) y luego uno directo (muévete)
+      const origen = [jefe.x, jefe.y - 0.8, jefe.z + 2], rap = vel + 10, k = 7;
+      for (let i = 0; i < k; i++) {
+        const a = (i / k) * TAU;
+        const obj = [nave.x + Math.cos(a) * 2.5, nave.y + Math.sin(a) * 2.0, 0];
+        const dir = V.norm(V.sub(obj, origen));
+        obs.push({ tipo: 'orbe', x: origen[0], y: origen[1], z: origen[2], vx: dir[0] * rap, vy: dir[1] * rap, vz: dir[2] * rap, t: 0, radio: 0.42, extra: 0 });
+      }
+      GS.Sonido.orbe();
+      jefe.directo = 0.7;
+      jefe.tDisparo = (jefe.fase === 1 ? 2.6 : 2.3) * cad;
+    }
+    if (jefe.directo > 0) { jefe.directo -= dtM; if (jefe.directo <= 0) disparoJefe(0); }
+    if (jefe.fase >= 2) {
+      jefe.tCortina -= dtM;
+      if (jefe.tCortina <= 0) { filaConHueco('orbe'); jefe.tCortina = (jefe.fase === 3 ? 2.4 : 3.2) * cad; }
+    }
+  }
+
+  /** Zorp, el emperador: cañones gemelos, láseres, refuerzos y al final todo junto. */
+  function ataqueEmperador(dtM, cad) {
+    jefe.tDisparo -= dtM;
+    if (jefe.tDisparo <= 0) {
+      jefe.lado = -jefe.lado;
+      const centro = jefe.x;
+      jefe.x = centro + jefe.lado * 2.4; // dispara desde el cañón de ese lado
+      if (jefe.fase === 3) [-1.4, 0, 1.4].forEach((d) => disparoJefe(d));
+      else disparoJefe(jefe.lado * 0.4);
+      jefe.x = centro;
+      jefe.tDisparo = (jefe.fase === 1 ? 0.75 : jefe.fase === 2 ? 1.0 : 1.2) * cad;
+    }
+    if (jefe.fase >= 2) {
+      jefe.tLaser -= dtM;
+      if (jefe.tLaser <= 0) { laser(true); jefe.tLaser = (jefe.fase === 3 ? 1.9 : 2.6) * cad; }
+      jefe.tRefuerzo -= dtM;
+      if (jefe.tRefuerzo <= 0) {
+        jefe.tRefuerzo = 5 * cad;
+        [-1, 1].forEach((l) => {
+          const x = U.clamp(nave.x + l * 1.8, -LX, LX), y = U.clamp(nave.y + U.rand(-1, 1), -LY, LY);
+          obs.push({ tipo: 'dron', x, y, x0: x, y0: y, z: jefe.z + 6, t: 0, fase: l, extra: 6, radio: 0.85 });
+        });
+      }
+    }
+  }
+
+  /** El jefe se fue (sobreviviste) o lo derribaste con la cámara (bonus). */
   function jefeVencido(derribado) {
     const j = jefe;
     jefe = null;
@@ -585,6 +722,8 @@
     const mult = sector ? sector.id : 1;
     let pts = J.sumarPuntos(PUNTOS.jefe * mult, false);
     if (derribado) {
+      J.congelar(0.18);
+      J.vibrar('jefeMuerto');
       pts += J.sumarPuntos(PUNTOS.jefeDerribado * mult, false);
       explosion([j.x, j.y, j.z], 'nave', 90);
       explosion([j.x, j.y, j.z], 'orbe', 40);
@@ -593,10 +732,11 @@
       J.flashColor = '255,210,63';
       GS.Sonido.explosion(true);
       // Sus disparos y láseres desaparecen con ella
-      obs.forEach((e) => { if (e.tipo === 'orbe' || (e.tipo === 'laser' && e.extra === 6)) e.muerto = true; });
-      J.emitir('aviso', '💥 ¡DERRIBASTE LA NAVE NODRIZA! +' + pts, 'exito');
+      obs.forEach((e) => { if (e.tipo === 'orbe' || e.tipo === 'roca' || (e.tipo === 'laser' && e.extra === 6)) e.muerto = true; });
+      J.emitir('aviso', '💥 ' + j.def.muerte + ' +' + pts, 'exito');
     } else {
-      J.emitir('aviso', '¡SOBREVIVISTE A LA NAVE NODRIZA! +' + pts, 'exito');
+      const quien = { nodriza: 'AL GUARDIÁN LUNAR', coloso: 'AL ROMPE-ROCAS', medusa: 'A LA REINA', emperador: 'A ZORP' }[j.def.id];
+      J.emitir('aviso', '¡SOBREVIVISTE ' + quien + '! +' + pts, 'exito');
     }
     GS.Musica.tocar('juego');
     if (sector) victoriaEn = 1.8;
@@ -634,9 +774,17 @@
     camInv = Q.conj(camQ);
   }
 
+  /** Ángulo en pantalla desde tu nave hacia lo que te pegó (null si fue de frente). */
+  function anguloChoque(e) {
+    const dx = e.x - nave.x, dy = -(e.y - nave.y);
+    return Math.hypot(dx, dy) < 0.35 ? null : Math.atan2(dy, dx);
+  }
+
   function choque(e) {
     if (J.invul > 0 || impulsoT > 0) return false; // atraviesas sin daño
     if (GS.Poderes.usarEscudo()) {
+      J.marcarGolpe(anguloChoque(e), '56,248,255');
+      J.vibrar('escudo');
       J.invul = 1;
       J.flash = 0.35;
       J.flashColor = '56,248,255';
@@ -653,7 +801,9 @@
     J.flash = 0.55;
     J.flashColor = '255,0,40';
     J.sacudida = 1.1;
-    J.vibrar([80, 40, 140]);
+    J.marcarGolpe(anguloChoque(e));
+    J.congelar(0.09);
+    J.vibrar('golpe');
     if (J.combo) { J.combo = 0; J.comboT = 0; J.emitir('combo'); }
     explosion([e.x, e.y, Math.max(e.z, -1)], e.tipo, 26);
     GS.Sonido.danio();
@@ -684,6 +834,7 @@
   function bonoPorPoco(e) {
     if (e) e.cerca = true;
     porPoco++;
+    J.vibrar('porPoco');
     GS.Progreso.evento('porPoco', porPoco);
     sumarCombo();
     const pts = J.sumarPuntos(PUNTOS.porPoco, true);
@@ -693,6 +844,7 @@
 
   function pasarAnillo(e) {
     anillos++;
+    J.vibrar('anillo');
     sumarCombo();
     const pts = J.sumarPuntos(PUNTOS.anillo, true);
     textos.push({ txt: '¡ANILLO! +' + pts, c: '#ffd23f', t: 0, vida: 0.9, x: e.x, y: e.y + 1.2 });
@@ -796,16 +948,18 @@
     if (J.usar3D && M3.listo) {
       M3.comenzar(camInv, camPos, sx, sy, FE);
       if (jefe) {
-        const col = Object.assign({}, jefe.colores || {}, COLORES_3D.fase[jefe.fase] || {});
+        const col = Object.assign({}, COLORES_3D.fase[jefe.fase] || {});
         if (jefe.golpe > 0) { col.aro = [1, 1, 1]; col.nucleo = [1, 1, 1]; } // destello al recibir un disparo
-        M3.dibujarModelo(M.jefe, [jefe.x, jefe.y, jefe.z], Q.eje(1, 0, 0, 0.35), 4.2, { t: jefe.t, colores: col });
+        const opcJ = { t: jefe.t, colores: col };
+        if (jefe.alfa < 1) opcJ.alfa = jefe.alfa;
+        M3.dibujarModelo(M[jefe.def.modelo] || M.jefe, [jefe.x, jefe.y, jefe.z], Q.eje(1, 0, 0, 0.35), 4.2, opcJ);
       }
       for (const e of obs) {
         const pos = [e.x, e.y, e.z];
         if (e.tipo === 'dron') M3.dibujarModelo(M.dron, pos, Q.mult(Q.eje(1, 0, 0, 0.15), Q.eje(0, 0, 1, Math.sin(e.t * 5) * 0.2)), e.radio, { t: e.t });
         else if (e.tipo === 'teleport') M3.dibujarModelo(M.dron, pos, Q.mult(Q.eje(1, 0, 0, 0.15), Q.eje(0, 0, 1, Math.sin(e.t * 7) * 0.25)), e.radio, { t: e.t, colores: COLORES_3D.teleport });
         else if (e.tipo === 'ovni') M3.dibujarModelo(M.ovni, pos, Q.mult(Q.eje(1, 0, 0, 0.3), Q.eje(0, 0, 1, Math.cos(e.t * 1.3 + e.fase) * 0.25)), e.radio, { t: e.t });
-        else if (e.tipo === 'meteoro') M3.dibujarModelo(M.meteoro[e.vari], pos, e.q, e.radio, { t: e.t });
+        else if (e.tipo === 'meteoro' || e.tipo === 'roca') M3.dibujarModelo(M.meteoro[e.vari], pos, e.q, e.radio, { t: e.t });
         else if (e.tipo === 'orbe') M3.dibujarModelo(M.orbe, pos, Q.identidad(), e.radio, { t: e.t });
         else if (e.tipo === 'anillo') M3.dibujarModelo(M.anillo, pos, Q.eje(0, 0, 1, e.t * 0.8), 1, { t: e.t });
         else if (e.tipo === 'capsula') {
@@ -955,7 +1109,7 @@
       if (p.detras) continue;
       const r = e.radio * p.k;
       if (e.tipo === 'orbe') { const w = r * 4.2; g.drawImage(SP.orbe, p.x - w / 2, p.y - w / 2, w, w); }
-      else if (e.tipo === 'meteoro') { const w = r * 3; g.globalAlpha = 0.35; g.drawImage(SP.brilloFuego, p.x - w / 2, p.y - w / 2, w, w); g.globalAlpha = 1; }
+      else if (e.tipo === 'meteoro' || e.tipo === 'roca') { const w = r * 3; g.globalAlpha = 0.35; g.drawImage(SP.brilloFuego, p.x - w / 2, p.y - w / 2, w, w); g.globalAlpha = 1; }
       else if (e.tipo === 'ovni') { const w = r * 2.2; g.globalAlpha = 0.5; g.drawImage(SP.brilloVerde, p.x - w / 2, p.y - w * 0.05, w, w * 0.6); g.globalAlpha = 1; }
       else if (e.tipo === 'capsula') { const w = r * 3.4; g.globalAlpha = 0.65; g.drawImage(SP.brilloVerde, p.x - w / 2, p.y - w / 2, w, w); g.globalAlpha = 1; }
       else if (e.tipo === 'laser') {
@@ -1065,7 +1219,7 @@
       if (e.tipo === 'dron' || e.tipo === 'teleport') { sp = SP.dron[((e.t * 12) | 0) % 2]; w = h = r * 2.6; }
       else if (e.tipo === 'ovni') { sp = SP.ovni[((e.t * 4) | 0) % 2]; w = r * 2.5; h = w * (sp.height / sp.width); }
       else if (e.tipo === 'jefe') { sp = SP.jefe; w = r * 2.4; h = w * (sp.height / sp.width); }
-      else if (e.tipo === 'meteoro') { sp = SP.meteoro[e.vari]; w = h = r * 2.6; }
+      else if (e.tipo === 'meteoro' || e.tipo === 'roca') { sp = SP.meteoro[e.vari]; w = h = r * 2.6; }
       else if (e.tipo === 'orbe' || e.tipo === 'capsula') { sp = SP.orbe; w = h = r * 3.2; }
       if (sp) { g.drawImage(sp, p.x - w / 2, p.y - h / 2, w, h); continue; }
       if (e.tipo === 'anillo') {
@@ -1100,40 +1254,76 @@
     }
   }
 
-  /** Control con cámara: una mira por cada mano y un aviso si no te ve. */
+  /** Control con cámara: una mira por cada mano. Se ve si la mano está en pistola,
+      cuánto falta para el gatillo (el arco amarillo) y cuándo dispara (se cierra y destella). */
   function dibujarMiras(g, W, H) {
     const CU = GS.Cuerpo;
     if (!CU) return;
     for (const m of CU.manos) {
-      const x = m.x * W, y = m.y * H;
-      const col = m.gatillo ? '#ff3df2' : m.pistola ? '#7cff4f' : 'rgba(255,255,255,0.45)';
-      const r = m.pistola ? 16 : 11;
+      const [x, y] = puntoMira(m);
+      const fog = Math.max(0, fogonazos[m.id] || 0) / 0.22;
+      g.save();
+      g.lineCap = 'round';
+      if (!m.pistola) {
+        // Mano normal: un círculo punteado y tenue
+        g.setLineDash([4, 5]);
+        g.strokeStyle = 'rgba(255,255,255,0.5)';
+        g.lineWidth = 2;
+        g.beginPath(); g.arc(x, y, 12, 0, TAU); g.stroke();
+        g.setLineDash([]);
+        if (m.abierta) { g.font = '20px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('✋', x, y); }
+        g.restore();
+        continue;
+      }
+      const disparando = m.gatillo;
+      const col = disparando ? '#ff3df2' : '#7cff4f';
+      const r = disparando ? 11 : 19 - m.carga * 6; // se va cerrando al bajar el pulgar
       g.strokeStyle = col;
-      g.lineWidth = 2.5;
       g.shadowColor = col;
-      g.shadowBlur = m.pistola ? 10 : 0;
+      g.shadowBlur = 12;
+      g.lineWidth = 2.6;
       g.beginPath();
       g.arc(x, y, r, 0, TAU);
-      if (m.pistola) {
-        g.moveTo(x - r - 8, y); g.lineTo(x - r + 5, y);
-        g.moveTo(x + r - 5, y); g.lineTo(x + r + 8, y);
-        g.moveTo(x, y - r - 8); g.lineTo(x, y - r + 5);
-        g.moveTo(x, y + r - 5); g.lineTo(x, y + r + 8);
-      }
+      // Marcas: hacia afuera si está listo, hacia adentro al disparar
+      const a1 = disparando ? r - 6 : r + 2, a2 = disparando ? r + 2 : r + 10;
+      g.moveTo(x - a1, y); g.lineTo(x - a2, y);
+      g.moveTo(x + a1, y); g.lineTo(x + a2, y);
+      g.moveTo(x, y - a1); g.lineTo(x, y - a2);
+      g.moveTo(x, y + a1); g.lineTo(x, y + a2);
       g.stroke();
-      g.shadowBlur = 0;
-      if (m.abierta) {
-        g.font = '20px sans-serif';
-        g.textAlign = 'center';
-        g.textBaseline = 'middle';
-        g.fillText('✋', x, y);
+      if (!disparando && m.carga > 0.05) {
+        // Arco amarillo: qué tanto falta para el gatillo
+        g.strokeStyle = '#ffd23f';
+        g.shadowColor = '#ffd23f';
+        g.lineWidth = 4;
+        g.beginPath();
+        g.arc(x, y, r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * m.carga);
+        g.stroke();
       }
+      if (disparando) {
+        g.fillStyle = col;
+        g.beginPath(); g.arc(x, y, 3.5, 0, TAU); g.fill();
+      }
+      if (fog > 0) {
+        // Destello de cada disparo
+        g.strokeStyle = 'rgba(255,255,255,' + fog.toFixed(2) + ')';
+        g.lineWidth = 3;
+        g.beginPath(); g.arc(x, y, 14 + (1 - fog) * 26, 0, TAU); g.stroke();
+      }
+      if (m.piloto) {
+        g.shadowBlur = 0;
+        g.font = '700 10px Orbitron, sans-serif';
+        g.textAlign = 'center';
+        g.fillStyle = col;
+        g.fillText(disparando ? '¡FUEGO!' : 'BAJA EL PULGAR', x, y + r + 22);
+      }
+      g.restore();
     }
     if (!CU.persona && J.estado === 'jugando') {
       g.font = '800 15px Orbitron, sans-serif';
       g.textAlign = 'center';
       g.fillStyle = 'rgba(255,208,216,' + (0.6 + 0.4 * Math.sin(nave.t * 6)).toFixed(2) + ')';
-      g.fillText('🧍 NO TE VEO: PÁRATE FRENTE A LA CÁMARA', W / 2, H * 0.62);
+      g.fillText(CU.modo === 'manos' ? '✋ NO VEO TU MANO: MUÉSTRALA A LA CÁMARA' : '🧍 NO TE VEO: PÁRATE FRENTE A LA CÁMARA', W / 2, H * 0.62);
     }
   }
 
@@ -1162,7 +1352,7 @@
       g.font = '800 12px Orbitron, sans-serif';
       g.fillStyle = 'rgba(255,208,216,' + (0.6 + 0.4 * Math.sin(jefe.t * 8)).toFixed(2) + ')';
       const fases = jefe.fases > 1 ? ' · FASE ' + jefe.fase + '/' + jefe.fases : '';
-      g.fillText('⚠ NAVE NODRIZA' + fases + ' · ' + Math.ceil(jefe.dur - jefe.t) + 's', W / 2, 100 + seguro.t);
+      g.fillText('⚠ ' + jefe.def.nombre + fases + ' · ' + Math.ceil(jefe.dur - jefe.t) + 's', W / 2, 100 + seguro.t);
       if (E.camara) {
         // Vida de la nave nodriza (solo con cámara, porque solo así se le puede disparar)
         const max = CFG.vidaJefeBase + CFG.vidaJefePorFase * jefe.fases, bw = 180;

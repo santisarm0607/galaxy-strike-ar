@@ -162,8 +162,10 @@
     J.campana = opc.sector || null;
     J.coop = !!opc.coop;
     J.tutorial = !!opc.tutorial;
+    J.reto = opc.reto || null; // reto del día: { id, icono, nombre, desc }
     // En línea todos juegan en Normal para que sea justo
     J.dif = J.modo === 'online' ? GS.Ajustes.DIFICULTAD.normal : GS.Ajustes.dif();
+    if (J.esReto('turbo')) J.dif = Object.assign({}, J.dif, { velocidad: J.dif.velocidad * 1.2, puntos: J.dif.puntos * 1.2 });
     J.tema = (J.campana ? GS.Sectores.get(J.campana) : GS.Sectores.lista[0]).tema;
     GS.Poderes.reiniciar();
     const comunes = {
@@ -171,20 +173,22 @@
       tiempo: opc.duracion || 0, duracion: opc.duracion || 0, tTotal: 0, puntos: 0,
       entidades: [], particulas: [], textos: [], textosPantalla: [], laseres: [], ataques: [], cola: [],
       invul: 0, sacudida: 0, flash: 0, flashColor: '255,0,40', vivo: true, gatillo: false, objetivo: null, jefe: null,
-      vidasPerdidas: 0, tSinDanio: 0, sinDanioAvisado: false, camaraLenta: 0, finEn: -1, victoriaEn: -1, resultado: null
+      vidasPerdidas: 0, tSinDanio: 0, sinDanioAvisado: false, camaraLenta: 0, finEn: -1, victoriaEn: -1, resultado: null,
+      hitStop: 0, hitStopCD: 0, golpesDir: [], jefesVistos: 0
     };
     if (J.tipoJuego === 'esquiva') {
-      const vidas = Math.max(1, GS.Esquiva.CFG.vidas + J.dif.vidasExtra);
+      const vidas = J.esReto('fragil') ? 3 : Math.max(1, GS.Esquiva.CFG.vidas + J.dif.vidasExtra);
       Object.assign(J, comunes, { vidas, vidasMax: vidas, oleada: 1 });
       J.estado = 'jugando';
       GS.Esquiva.iniciar(opc);
     } else {
-      const vidas = Math.max(2, CONFIG.vidasMax + J.dif.vidasExtra);
+      const vidas = J.esReto('fragil') ? 3 : Math.max(2, CONFIG.vidasMax + J.dif.vidasExtra);
       Object.assign(J, comunes, {
         vidas, vidasMax: vidas, oleada: 0, tOleada: 0, marcaGolpe: 0, enfriamiento: 0,
         entreOleadas: J.tutorial ? Infinity : 1.0, tMeteoro: Infinity, jugadorX: 0, pistaRebote: false,
         canon: 0, alertaT: 0, defOleada: null, explosionesJefe: []
       });
+      if (J.esReto('jefes') && !J.campana) J.oleada = 4; // la próxima oleada (la 5) trae al jefe
       J.estado = 'jugando';
     }
     GS.Musica.tocar('juego');
@@ -194,6 +198,9 @@
     emitir('combo');
     if (J.tutorial) GS.Tutorial.iniciar(J.tipoJuego);
   };
+
+  /** ¿Esta partida es el reto del día con este modificador? */
+  J.esReto = (id) => !!(J.reto && J.reto.id === id);
 
   J.multiplicador = () => (J.combo >= 10 ? 4 : J.combo >= 6 ? 3 : J.combo >= 3 ? 2 : 1);
 
@@ -236,11 +243,47 @@
     GS.Sonido.poder();
   };
 
-  function vibrar(patron) {
-    if (GS.Sensores.modo !== 'giro' || !GS.Ajustes.get('vibracion')) return;
+  /* ---------------- Sensación de los golpes (los usan los dos modos) ----------------
+     - Vibraciones distintas para cada cosa (solo Android: el iPhone no deja vibrar desde la web).
+     - Micro-pausa («hit-stop»): el mundo se congela unas centésimas al destruir o al recibir daño.
+     - Marca de dirección: un arco rojo en el borde te dice de dónde vino el golpe. */
+  const VIBRA = {
+    disparo: 8, kill: 22, golpe: [90, 40, 160], escudo: [40, 30, 40], poder: [25, 35, 25, 35, 70],
+    jefeFase: [70, 40, 70], jefeMuerto: [120, 60, 220], porPoco: 12, anillo: [15, 30, 15], impulso: 18, puntoDebil: [15, 20, 30]
+  };
+  J.vibrar = function (p) {
+    const patron = typeof p === 'string' ? VIBRA[p] : p;
+    if (!patron || !GS.Ajustes.get('vibracion')) return;
     try { if (navigator.vibrate) navigator.vibrate(patron); } catch (e) { /* nada */ }
-  }
-  J.vibrar = (p) => { try { if (GS.Ajustes.get('vibracion') && navigator.vibrate) navigator.vibrate(p); } catch (e) { /* nada */ } };
+  };
+  const vibrar = (p) => J.vibrar(p);
+
+  /** Congela el mundo un instante. Los golpes chicos no se encadenan (con la ráfaga sería molesto). */
+  J.congelar = function (seg) {
+    if (J.hitStopCD > 0 && seg < 0.1) return;
+    J.hitStop = Math.max(J.hitStop || 0, seg);
+    J.hitStopCD = 0.14;
+  };
+
+  /** Marca en el borde: ang en radianes de pantalla (0 = derecha, PI/2 = abajo). c = color 'r,g,b'. */
+  J.marcarGolpe = function (ang, c) {
+    if (ang == null || !isFinite(ang)) return;
+    J.golpesDir.push({ ang, t: 0, c: c || '255,40,60' });
+    if (J.golpesDir.length > 4) J.golpesDir.shift();
+  };
+
+  /** Avanza la sensación de golpes y devuelve cuánto corre el mundo (≈0 durante la micro-pausa). */
+  J.pasoSensacion = function (dt) {
+    const congelado = J.hitStop > 0;
+    J.hitStop -= dt;
+    J.hitStopCD -= dt;
+    for (const g of J.golpesDir) g.t += dt;
+    if (J.golpesDir.length) J.golpesDir = J.golpesDir.filter((g) => g.t < 1.1);
+    return congelado ? 0.05 : 1;
+  };
+
+  // Ganar un poder también se siente
+  GS.Poderes.alActivar(() => { if (J.estado === 'jugando') vibrar('poder'); });
 
   /* ---------------- Oleadas ---------------- */
   J.totalOleadas = () => (J.campana ? GS.Sectores.get(J.campana).oleadas.length : 0);
@@ -316,12 +359,18 @@
       case 'jefe': {
         const cfg = c.jefe || { hp: 14 + n * 2, fases: 2 };
         const hp = Math.round(cfg.hp * (0.7 + 0.3 * d.velocidad));
+        // Cada sector tiene su jefe; en el Infinito se turnan
+        J.jefesVistos++;
+        const def = J.campana ? GS.Jefes.get(J.campana) : GS.Jefes.turno(J.jefesVistos);
+        const dist = def.id === 'coloso' ? 15 : def.id === 'emperador' ? 17 : 16;
         J.entidades.push({
-          tipo: 'jefe', enemigo: true, yaw0: c.yaw * 0.3, yaw: c.yaw * 0.3, dist: 16, alt: 3, radio: 2.6,
+          tipo: 'jefe', def, enemigo: true, yaw0: c.yaw * 0.3, yaw: c.yaw * 0.3, dist, alt: 3, radio: def.id === 'emperador' ? 2.9 : 2.6,
           hp, hpMax: hp, fases: cfg.fases || 2, fase: 1, final: !!cfg.final, t: 0, entrada: 0, tDisparo: 3, tDron: 5,
-          rafaga: 0, tRafaga: 0, abanico: 0, pos: posDesde(c.yaw * 0.3, 16, 3),
-          colores: J.campana ? COLORES_JEFE[J.campana] : COLORES_JEFE[1 + (Math.floor((J.oleada - 1) / 5) % 4)]
+          rafaga: 0, tRafaga: 0, abanico: 0, pos: posDesde(c.yaw * 0.3, dist, 3), alfa: 1,
+          tMeteoro: 2.5, tBlindaje: 3.2, blindado: false, tSalto: 5, salto: 0, tRefuerzo: 3, lado: 1,
+          colores: def.id === 'nodriza' && J.campana ? COLORES_JEFE[J.campana] : null
         });
+        emitir('aviso', def.llegada, 'peligro');
         break;
       }
     }
@@ -338,9 +387,9 @@
     yawCamara: () => camYaw
   };
 
-  function dispararOrbe(origen, rapidez, desvio = 0) {
+  function dispararOrbe(origen, rapidez, desvio = 0, arriba = 0) {
     const derecha = [Math.cos(camYaw), 0, -Math.sin(camYaw)];
-    const obj = V.add(V.add(camPos, V.esc(derecha, desvio)), [U.rand(-0.15, 0.15), U.rand(-0.15, 0.15), U.rand(-0.15, 0.15)]);
+    const obj = V.add(V.add(camPos, V.esc(derecha, desvio)), [U.rand(-0.15, 0.15), arriba + U.rand(-0.15, 0.15), U.rand(-0.15, 0.15)]);
     const vel = V.esc(V.norm(V.sub(obj, origen)), rapidez * J.dif.velocidad);
     J.entidades.push({ tipo: 'orbe', pos: origen.slice(), vel, radio: 0.32, radioGolpe: 0.72, hp: 1, t: 0, vida: 9, minDist: 99 });
     GS.Sonido.orbe();
@@ -356,6 +405,20 @@
     J.entidades.push({
       tipo: 'meteoro', pos, vel: V.esc(V.norm(V.sub(obj, pos)), rapidez), radio: 0.75, radioGolpe: 1.05,
       hp: 99, t: 0, rot: Math.random() * TAU, vrot: U.rand(-2, 2), vida: 6, minDist: 99, vari: (Math.random() * 3) | 0,
+      q: Q.normalizar([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5]),
+      eje: V.norm([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5])
+    });
+    GS.Sonido.meteoro();
+  }
+
+  /** Meteoro que lanza un jefe desde su posición, directo hacia ti. */
+  function lanzarMeteoroDesde(origen, desvio = 0) {
+    const derecha = [Math.cos(camYaw), 0, -Math.sin(camYaw)];
+    const obj = V.add(V.add(camPos, V.esc(derecha, desvio)), [U.rand(-0.2, 0.2), U.rand(-0.15, 0.15), 0]);
+    const rapidez = (8 + Math.min(J.oleada * 0.08, 1.5)) * J.dif.velocidad;
+    J.entidades.push({
+      tipo: 'meteoro', pos: origen.slice(), vel: V.esc(V.norm(V.sub(obj, origen)), rapidez), radio: 0.75, radioGolpe: 1.05,
+      hp: 99, t: 0, rot: 0, vrot: U.rand(-2, 2), vida: 7, minDist: 99, vari: (Math.random() * 3) | 0,
       q: Q.normalizar([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5]),
       eje: V.norm([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5])
     });
@@ -420,9 +483,10 @@
       return;
     }
 
-    // Tiempo del mundo: la cámara lenta (poder o final del jefe) frena a los aliens, no a ti
+    // Tiempo del mundo: la cámara lenta (poder o final del jefe) y la micro-pausa frenan a los aliens, no a ti
     J.camaraLenta -= dt;
-    const dtM = dt * (J.camaraLenta > 0 ? 0.3 : 1) * GS.Poderes.escalaTiempo();
+    const hs = J.pasoSensacion(dt);
+    const dtM = dt * (J.camaraLenta > 0 ? 0.3 : 1) * GS.Poderes.escalaTiempo() * hs;
 
     J.tTotal += dt;
     if (J.modo === 'online' && J.duracion > 0) {
@@ -478,7 +542,7 @@
         J.tMeteoro -= dtM;
         if (J.tMeteoro <= 0) {
           lanzarMeteoro();
-          J.tMeteoro = (J.defOleada && J.defOleada.meteoros ? J.defOleada.meteoros : 6) * U.rand(0.85, 1.25) / J.dif.velocidad;
+          J.tMeteoro = (J.defOleada && J.defOleada.meteoros ? J.defOleada.meteoros : 6) * U.rand(0.85, 1.25) / J.dif.velocidad * (J.esReto('meteoros') ? 0.5 : 1);
         }
       }
       for (let i = J.ataques.length - 1; i >= 0; i--) {
@@ -504,7 +568,7 @@
         }
       }
     }
-    actualizarEfectos(J.camaraLenta > 0 ? dt * 0.5 : dt);
+    actualizarEfectos((J.camaraLenta > 0 ? dt * 0.5 : dt) * hs);
   };
 
   function moverOrbitante(e, dt, n) {
@@ -558,7 +622,7 @@
       }
       case 'dron': {
         const d = V.sub(camPos, e.pos), dist = V.len(d);
-        if (dist < 0.9) { recibirDanio(); explotar(e); return false; }
+        if (dist < 0.9) { recibirDanio(e); explotar(e); return false; }
         const dir = V.esc(d, 1 / dist), lado = [-dir[2], 0, dir[0]];
         const zigzag = Math.sin(e.t * 3.2) * 1.4 * Math.min(1, dist / 6);
         e.pos = V.add(e.pos, V.add(V.esc(dir, e.vel * dt), V.esc(lado, zigzag * dt)));
@@ -585,7 +649,7 @@
         const d = V.dist(e.pos, camPos);
         e.minDist = Math.min(e.minDist, d);
         if (d < e.radioGolpe) {
-          if (recibirDanio()) explotar(e);
+          if (recibirDanio(e)) explotar(e);
           if (e.tipo === 'meteoro' && J.tutorial) emitir('tutGolpe');
           return false;
         }
@@ -602,33 +666,52 @@
     return true;
   }
 
-  /** La nave nodriza: 3 fases según la vida que le quede. */
+  /** Los jefes: cambian de fase según la vida que les quede. En la última, su punto débil queda expuesto. */
   function actualizarJefe(e, dt, n) {
+    const def = e.def;
     e.entrada = Math.min(1, e.entrada + dt * 0.8);
     const r = e.hp / e.hpMax;
     const fase = e.fases >= 3 && r <= 0.3 ? 3 : e.fases >= 2 && r <= 0.6 ? 2 : 1;
     if (fase !== e.fase) {
       e.fase = fase;
       J.sacudida = 0.7;
+      J.congelar(0.12);
+      vibrar('jefeFase');
       GS.Sonido.alerta();
       GS.Musica.nivel(3);
-      emitir('aviso', fase === 2 ? '⚠️ ¡La nave nodriza se enfurece!' : '👁️ ¡Su ojo quedó expuesto! Dispárale al ojo', 'peligro');
+      emitir('aviso', fase === e.fases ? def.fases.final : def.fases[2], 'peligro');
       soltarCapsula(V.add(e.pos, [0, -1.5, 0]));
     }
-    const velMov = fase === 3 ? 0.65 : fase === 2 ? 0.48 : 0.35;
-    e.fx = (e.fx || 0) + dt * velMov;
-    e.yaw = e.yaw0 + Math.sin(e.fx) * (0.45 + 0.08 * fase);
-    e.alt = 2.6 + Math.sin(e.t * 0.9) * 0.4;
-    e.pos = posDesde(e.yaw, e.dist, e.alt);
-    // Posición del ojo (punto débil)
+    e.expuesto = e.fases >= 2 && fase === e.fases;
+    const ultima = e.expuesto;
+
+    // Movimiento
+    if (def.id === 'medusa') moverMedusa(e, dt, fase);
+    else {
+      const velMov = (fase === 3 ? 0.65 : fase === 2 ? 0.48 : 0.35) * (def.id === 'coloso' ? 0.6 : 1);
+      e.fx = (e.fx || 0) + dt * velMov;
+      e.yaw = e.yaw0 + Math.sin(e.fx) * (0.45 + 0.08 * fase) * (def.id === 'emperador' ? 0.8 : 1);
+      e.alt = (def.id === 'coloso' ? 2.2 : 2.6) + Math.sin(e.t * 0.9) * 0.4;
+      e.pos = posDesde(e.yaw, e.dist, e.alt);
+    }
+    // Dónde está su punto débil
     const esc = e.radio * Math.max(0.01, U.easeOutBack(e.entrada));
     const q = haciaJugador(e.pos, Q.eje(1, 0, 0, 0.2 + Math.sin(e.t * 0.9) * 0.05));
-    e.ojo = V.add(e.pos, V.esc(Q.rotar(q, [0, 0.33, 0.5]), esc));
-    e.radioOjo = 0.2 * esc;
+    e.ojo = V.add(e.pos, V.esc(Q.rotar(q, def.puntoDebil), esc));
+    e.radioOjo = def.radioDebil * esc;
 
+    if (!J.vivo) return;
     const cad = J.dif.cadenciaEnemiga;
+    if (def.id === 'coloso') ataqueColoso(e, dt, n, fase, ultima, cad);
+    else if (def.id === 'medusa') ataqueMedusa(e, dt, n, fase, ultima, cad);
+    else if (def.id === 'emperador') ataqueEmperador(e, dt, n, fase, ultima, cad, q, esc);
+    else ataqueNodriza(e, dt, n, fase, cad);
+  }
+
+  /** Guardián lunar: ráfagas, abanico y drones. */
+  function ataqueNodriza(e, dt, n, fase, cad) {
     e.tDisparo -= dt;
-    if (e.tDisparo <= 0 && J.vivo) {
+    if (e.tDisparo <= 0) {
       if (fase === 1) { e.rafaga = 3; e.abanico = 0; e.tDisparo = Math.max(2.2, 3.8 - n * 0.06) * cad; }
       else if (fase === 2) { e.rafaga = 5; e.abanico = 1; e.tDisparo = 3.2 * cad; }
       else { e.rafaga = 1; e.abanico = 0; e.tDisparo = 0.75 * cad; }
@@ -639,7 +722,7 @@
       e.tRafaga -= dt;
       if (e.tRafaga <= 0) {
         const desvio = e.abanico ? (e.iRafaga - 2) * 0.9 : 0;
-        if (J.vivo) dispararOrbe(V.add(e.pos, [0, -1, 0]), (6 + n * 0.15) * (fase === 3 ? 1.15 : 1), desvio);
+        dispararOrbe(V.add(e.pos, [0, -1, 0]), (6 + n * 0.15) * (fase === 3 ? 1.15 : 1), desvio);
         e.rafaga--;
         e.iRafaga++;
         e.tRafaga = e.abanico ? 0.18 : 0.35;
@@ -647,10 +730,131 @@
     }
     if (fase >= 2) {
       e.tDron -= dt;
-      if (e.tDron <= 0 && J.vivo) {
+      if (e.tDron <= 0) {
         e.tDron = (fase === 3 ? 6 : 5) * cad;
         J.entidades.push({ tipo: 'dron', enemigo: true, pos: V.add(e.pos, [0, -1.2, 0]), radio: 0.6, hp: 1, t: 0, vel: 2.4 * J.dif.velocidad });
       }
+    }
+  }
+
+  /** El Rompe-rocas: lanza meteoros (¡esquívalos!), se cubre con una coraza y al final muestra su núcleo. */
+  function ataqueColoso(e, dt, n, fase, ultima, cad) {
+    // Coraza: en la fase 2 se cierra un rato y se vuelve a abrir
+    if (fase === 2 && !ultima) {
+      e.tBlindaje -= dt;
+      if (e.tBlindaje <= 0) {
+        e.blindado = !e.blindado;
+        e.tBlindaje = e.blindado ? 1.8 : 3.2;
+        if (e.blindado) GS.Sonido.escudo();
+      }
+    } else e.blindado = false;
+    e.tMeteoro -= dt;
+    if (e.tMeteoro <= 0) {
+      const origen = V.add(e.pos, [0, 0.6, 0]);
+      lanzarMeteoroDesde(origen, U.rand(-0.3, 0.3));
+      if (ultima) e.meteoroExtra = 0.55; // al final, de a dos
+      e.tMeteoro = (fase === 1 ? 3.6 : fase === 2 ? 3.1 : 2.6) * cad;
+    }
+    if (e.meteoroExtra > 0) {
+      e.meteoroExtra -= dt;
+      if (e.meteoroExtra <= 0) lanzarMeteoroDesde(V.add(e.pos, [0, 0.6, 0]), (Math.random() < 0.5 ? -1 : 1) * 1.1);
+    }
+    e.tDisparo -= dt;
+    if (e.tDisparo <= 0) {
+      const brazos = [-0.7, 0.7];
+      if (!e.blindado) brazos.forEach((dv) => dispararOrbe(V.add(e.pos, [0, -0.6, 0]), 5.2 + n * 0.12, dv));
+      if (ultima) dispararOrbe(V.add(e.pos, [0, -0.6, 0]), 6 + n * 0.12, 0);
+      e.tDisparo = (ultima ? 2.4 : 3.2) * cad;
+    }
+  }
+
+  /** La Reina de la nebulosa: se teletransporta alrededor tuyo y lanza anillos de plasma. */
+  function moverMedusa(e, dt, fase) {
+    e.tSalto -= dt;
+    if (e.salto === 0 && e.tSalto <= 0) e.salto = 1; // empieza a desvanecerse
+    if (e.salto === 1) {
+      e.alfa = Math.max(0, e.alfa - dt * 3);
+      if (e.alfa <= 0) {
+        chispas(e.pos, ['#ff8af0', '#ffffff'], 16);
+        const lim = GS.Sensores.arcoMax() * DEG * 0.8;
+        let nuevo = e.yaw0 + U.rand(0.5, 1.1) * (Math.random() < 0.5 ? -1 : 1);
+        if (Math.abs(nuevo) > lim) nuevo = U.clamp(-nuevo * 0.5, -lim, lim);
+        e.yaw0 = e.yaw = nuevo;
+        e.salto = 2;
+        GS.Sonido.teleport();
+      }
+    } else if (e.salto === 2) {
+      e.alfa = Math.min(1, e.alfa + dt * 2.5);
+      if (e.alfa >= 1) { e.salto = 0; e.tSalto = (fase === 1 ? 5.5 : fase === 2 ? 3.8 : 3) * J.dif.cadenciaEnemiga; }
+    }
+    e.fx = (e.fx || 0) + dt * 0.5;
+    e.yaw = e.yaw0 + Math.sin(e.fx) * 0.18;
+    e.alt = 2.4 + Math.sin(e.t * 1.6) * 0.5;
+    e.pos = posDesde(e.yaw, e.dist, e.alt);
+  }
+
+  function ataqueMedusa(e, dt, n, fase, ultima, cad) {
+    if (e.alfa < 0.9) return; // no ataca mientras salta
+    e.tDisparo -= dt;
+    if (e.tDisparo <= 0) {
+      // Anillo de orbes a tu alrededor (quédate quieto) y uno directo (esquívalo)
+      const k = ultima ? 7 : 5, rap = (4.6 + n * 0.1) * (ultima ? 1.2 : 1), origen = V.add(e.pos, [0, -0.6, 0]);
+      for (let i = 0; i < k; i++) {
+        const a = Math.PI * (0.05 + 0.9 * (i / (k - 1))); // arco por arriba y los lados
+        dispararOrbe(origen, rap, Math.cos(a) * 2.7, Math.sin(a) * 1.6);
+      }
+      e.directo = 0.6;
+      e.tDisparo = (fase === 1 ? 3.6 : fase === 2 ? 3.1 : 2.5) * cad;
+    }
+    if (e.directo > 0) {
+      e.directo -= dt;
+      if (e.directo <= 0) dispararOrbe(V.add(e.pos, [0, -0.6, 0]), 6 + n * 0.15, 0);
+    }
+    if (fase >= 2) {
+      e.tRefuerzo -= dt;
+      if (e.tRefuerzo <= 0) {
+        e.tRefuerzo = 7.5 * cad;
+        const yaw = e.yaw + U.rand(-0.5, 0.5);
+        J.entidades.push({ tipo: 'teleport', enemigo: true, yaw, dist: 9, alt: U.rand(0, 1.6), radio: 0.62, hp: 1, t: 0, entrada: 0,
+          pos: posDesde(yaw, 9, 0.8), tSalto: 2, tDisparo: 99 });
+      }
+    }
+  }
+
+  /** Zorp, el emperador: cañones gemelos, refuerzos y al final todo su arsenal. */
+  function ataqueEmperador(e, dt, n, fase, ultima, cad, q, esc) {
+    const canon = (lado) => V.add(e.pos, V.esc(Q.rotar(q, [lado * 1.15, -0.02, 0.74]), esc));
+    e.tDisparo -= dt;
+    if (e.tDisparo <= 0) {
+      if (ultima) { dispararOrbe(canon(e.lado), 7 + n * 0.12, e.lado * 0.4); e.lado = -e.lado; e.tDisparo = 0.62 * cad; }
+      else if (fase === 2) { for (let i = 0; i < 5; i++) dispararOrbe(canon(i % 2 ? 1 : -1), 5.8 + n * 0.12, (i - 2) * 0.85); e.tDisparo = 3.0 * cad; }
+      else { e.rafaga = 4; e.iRafaga = 0; e.tRafaga = 0; e.tDisparo = 2.6 * cad; }
+    }
+    if (e.rafaga > 0) {
+      e.tRafaga -= dt;
+      if (e.tRafaga <= 0) {
+        const lado = e.iRafaga % 2 ? 1 : -1;
+        dispararOrbe(canon(lado), 6.2 + n * 0.12, lado * 0.35);
+        e.rafaga--;
+        e.iRafaga++;
+        e.tRafaga = 0.28;
+      }
+    }
+    if (fase >= 2) {
+      e.tRefuerzo -= dt;
+      if (e.tRefuerzo <= 0) {
+        e.tRefuerzo = (ultima ? 9 : 6.5) * cad;
+        [-1, 1].forEach((l) => J.entidades.push({ tipo: 'dron', enemigo: true, pos: canon(l), radio: 0.6, hp: 1, t: l, vel: 2.5 * J.dif.velocidad }));
+        if (!ultima) {
+          const yaw = e.yaw + U.rand(-0.4, 0.4);
+          J.entidades.push({ tipo: 'blindado', enemigo: true, yaw, dist: 10, alt0: 1.2, alt: 1.2, radio: 0.85, hp: 3, hpMax: 3, t: 0, entrada: 0,
+            pos: posDesde(yaw, 10, 1.2), w: (Math.random() < 0.5 ? -1 : 1) * 0.07, tDisparo: 2.5 });
+        }
+      }
+    }
+    if (ultima) {
+      e.tMeteoro -= dt;
+      if (e.tMeteoro <= 0) { lanzarMeteoro(); e.tMeteoro = 4.5 * cad; }
     }
   }
 
@@ -661,11 +865,12 @@
     for (const e of J.entidades) {
       const p = e.proy;
       if (!p || p.detras || e.muerto) continue;
+      if (e.alfa != null && e.alfa < 0.35) continue; // la Reina mientras se teletransporta
       const dx = p.x - cx, dy = p.y - cy;
       const r = e.radio * p.k * 1.1 + ayuda;
       if (dx * dx + dy * dy <= r * r && p.z < mejorZ) { mejor = e; mejorZ = p.z; }
     }
-    if (mejor && mejor.tipo === 'jefe' && mejor.ojo && mejor.fase === 3) {
+    if (mejor && mejor.tipo === 'jefe' && mejor.ojo && mejor.expuesto) {
       const po = proyectar(mejor.ojo);
       if (!po.detras) {
         const ro = mejor.radioOjo * po.k + 12;
@@ -682,7 +887,7 @@
     J.canon = 1 - J.canon;
     J.laseres.push({ t: 0.09, lado: J.canon });
     GS.Sonido.disparo();
-    vibrar(12);
+    vibrar('disparo');
     if (J.objetivo) golpear(J.objetivo);
   }
 
@@ -699,6 +904,13 @@
       return;
     }
     if (e.tipo === 'capsula') { recogerCapsula(e); e.muerto = true; return; }
+    if (e.tipo === 'jefe' && e.blindado && !porBomba) {
+      // El Rompe-rocas cerró su coraza: los disparos rebotan
+      chispas(e.pos, ['#c9a27a', '#ffffff'], 6);
+      GS.Sonido.rebote();
+      if (!e.avisoBlindado || J.tTotal - e.avisoBlindado > 2) { e.avisoBlindado = J.tTotal; J.textosPantalla.push({ txt: '🪨 ¡BLINDADO! Espera a que se abra', c: '#e8c39e', t: 0, vida: 0.9 }); }
+      return;
+    }
     if (!porBomba) { J.aciertos++; J.marcaGolpe = 0.16; }
     const danio = e.tipo === 'jefe' && J.objetivoOjo ? 3 : 1;
     e.hp -= danio;
@@ -706,12 +918,14 @@
     if (e.hp > 0) {
       GS.Sonido.impacto();
       chispas(e.ojo && danio > 1 ? e.ojo : e.pos, danio > 1 ? ['#ff3355', '#ffffff'] : ['#ffffff', '#c9b3ff'], danio > 1 ? 12 : 6);
-      if (danio > 1) J.textosPantalla.push({ txt: '¡PUNTO DÉBIL! x3', c: '#ff6b81', t: 0, vida: 0.7 });
+      if (danio > 1) { J.textosPantalla.push({ txt: '¡PUNTO DÉBIL! x3', c: '#ff6b81', t: 0, vida: 0.7 }); J.congelar(0.04); vibrar('puntoDebil'); }
       if (e.tipo === 'blindado' && e.hp === 1) { chispas(e.pos, ['#6fb6ff', '#ffffff'], 16); emitir('escudoRoto'); }
       return;
     }
     e.muerto = true;
     if (e.enemigo) {
+      J.congelar(e.tipo === 'jefe' ? 0.18 : 0.045);
+      vibrar(e.tipo === 'jefe' ? 'jefeMuerto' : 'kill');
       J.kills++;
       GS.Progreso.evento('kill');
       J.combo = J.comboT > 0 ? J.combo + 1 : 1;
@@ -725,7 +939,7 @@
       emitir('combo');
       if (J.tutorial) emitir('tutKill');
       // A veces dejan caer un poder
-      if (e.tipo !== 'jefe' && !e.tutorial && Math.random() < 0.09) soltarCapsula(e.pos);
+      if (e.tipo !== 'jefe' && !e.tutorial && Math.random() < (J.esReto('poderes') ? 0.2 : 0.09)) soltarCapsula(e.pos);
     }
     const pts = J.sumarPuntos(PUNTOS_TIPO[e.tipo] || 50, e.enemigo);
     textoFlotante(e.pos, '+' + pts, !e.enemigo ? '#ffb3f8' : J.multiplicador() > 1 ? '#ffd23f' : '#ffffff');
@@ -744,7 +958,7 @@
       J.flashColor = '255,255,255';
       for (let i = 0; i < 5; i++) J.explosionesJefe.push({ t: 0.12 + i * 0.22, pos: V.add(e.pos, [U.rand(-2, 2), U.rand(-1, 1), U.rand(-1, 1)]) });
       if (J.vidas < J.vidasMax) { J.vidas++; emitir('vidas'); }
-      emitir('aviso', e.final ? '👑 ¡DERROTASTE A ZORP!' : '¡NAVE NODRIZA DESTRUIDA! +1 ❤', 'exito');
+      emitir('aviso', e.def.muerte + ' +1 ❤', 'exito');
       if (J.modo === 'online') emitir('ataque', 5);
       GS.Musica.tocar('juego');
     }
@@ -758,9 +972,23 @@
     if (J.tutorial) emitir('tutPoder');
   }
 
-  function recibirDanio() {
+  /** Ángulo en pantalla hacia donde vino el golpe (null si venía de frente, porque ya lo viste). */
+  function anguloDesde(e) {
+    if (!e || !e.pos) return null;
+    const d = e.vel ? V.esc(e.vel, -1) : V.sub(e.pos, camPos);
+    const v = Q.rotar(camInv, d);
+    const lado = Math.hypot(v[0], v[1]);
+    if (v[2] > 0 && lado < 0.35 * V.len(v)) return Math.PI / 2; // por la espalda: abajo
+    if (v[2] <= 0 && lado < 0.18 * V.len(v)) return null;
+    return Math.atan2(-v[1], v[0]);
+  }
+
+  function recibirDanio(fuente) {
     if (J.invul > 0 || !J.vivo) return false;
+    const ang = anguloDesde(fuente);
     if (GS.Poderes.usarEscudo()) {
+      J.marcarGolpe(ang, '56,248,255');
+      vibrar('escudo');
       J.invul = 1;
       J.flash = 0.35;
       J.flashColor = '56,248,255';
@@ -776,9 +1004,11 @@
     J.flash = 0.55;
     J.flashColor = '255,0,40';
     J.sacudida = 1;
+    J.marcarGolpe(ang);
+    J.congelar(0.09);
     if (J.combo) { J.combo = 0; J.comboT = 0; emitir('combo'); }
     GS.Sonido.danio();
-    vibrar([80, 40, 140]);
+    vibrar('golpe');
     emitir('vidas');
     if (J.vidas <= 0) {
       J.vivo = false;
@@ -943,8 +1173,12 @@
       case 'jefe': {
         const esc = e.radio * Math.max(0.01, U.easeOutBack(e.entrada));
         const incl = Q.eje(1, 0, 0, 0.2 + Math.sin(e.t * 0.9) * 0.05);
-        opc.colores = Object.assign({}, e.colores || {}, COLORES_FASE[e.fase] || {});
-        M3.dibujarModelo(M.jefe, e.pos, haciaJugador(e.pos, incl), esc, opc);
+        opc.colores = Object.assign({}, e.colores || {}, e.expuesto || e.fase > 1 ? COLORES_FASE[e.expuesto ? 3 : 2] : {});
+        if (e.alfa < 1) opc.alfa = e.alfa;
+        const qj = haciaJugador(e.pos, incl);
+        M3.dibujarModelo(M[e.def.modelo] || M.jefe, e.pos, qj, esc, opc);
+        // Coraza de roca del Rompe-rocas
+        if (e.blindado) M3.dibujarModelo(M.escudo, e.pos, qj, esc * 1.45, { t: e.t, alfa: 0.75, colores: { escudo: [0.85, 0.55, 0.3] }, destello: opc.destello });
         break;
       }
       case 'capsula': {
@@ -1069,7 +1303,7 @@
     }
     // Punto débil del jefe en la fase 3
     const jf = J.jefe;
-    if (jf && jf.fase === 3 && jf.ojo) {
+    if (jf && jf.expuesto && jf.ojo && jf.alfa > 0.5) {
       const po = proyectar(jf.ojo);
       if (!po.detras) {
         const pul = 1 + Math.sin(performance.now() / 90) * 0.15;
@@ -1354,6 +1588,7 @@
 
   /** Destellos de pantalla (daño, bomba, escudo) y borde del escudo/cámara lenta. Lo usan los dos modos. */
   J.dibujarAuras = function (g, W, H) {
+    dibujarMarcasGolpe(g, W, H);
     const c = J.flashColor || '255,0,40';
     if (J.flash > 0) {
       const gr = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.7);
@@ -1373,6 +1608,36 @@
       g.fillRect(0, 0, W, H);
     }
   };
+
+  /** Arcos en el borde que señalan de dónde vino cada golpe. */
+  function dibujarMarcasGolpe(g, W, H) {
+    if (!J.golpesDir || !J.golpesDir.length) return;
+    const rx = W * 0.43, ry = H * 0.4, cxp = W / 2, cyp = H / 2;
+    g.save();
+    g.lineCap = 'round';
+    for (const m of J.golpesDir) {
+      const a = Math.max(0, 1 - m.t / 1.1), pul = 1 + Math.sin(m.t * 22) * 0.08 * a;
+      const col = 'rgba(' + m.c + ',' + (0.9 * a).toFixed(2) + ')';
+      g.strokeStyle = col;
+      g.fillStyle = col;
+      g.shadowColor = 'rgba(' + m.c + ',1)';
+      g.shadowBlur = 18;
+      g.lineWidth = 9 * pul;
+      g.beginPath();
+      g.ellipse(cxp, cyp, rx, ry, 0, m.ang - 0.32, m.ang + 0.32);
+      g.stroke();
+      // Flecha que apunta hacia afuera, hacia el atacante
+      const ca = Math.cos(m.ang), sa = Math.sin(m.ang);
+      const px = cxp + (rx + 16) * ca, py = cyp + (ry + 16) * sa;
+      g.beginPath();
+      g.moveTo(px + ca * 16, py + sa * 16);
+      g.lineTo(px - sa * 15 - ca * 6, py + ca * 15 - sa * 6);
+      g.lineTo(px + sa * 15 - ca * 6, py - ca * 15 - sa * 6);
+      g.closePath();
+      g.fill();
+    }
+    g.restore();
+  }
 
   function dibujarLaseres() {
     const colorLaser = GS.Progreso.nave().laser;
@@ -1524,7 +1789,7 @@
     ctx.font = '800 10px Orbitron, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffd0d8';
-    const nombre = e.final ? 'ZORP, EL EMPERADOR' : 'NAVE NODRIZA';
+    const nombre = e.def.nombre;
     ctx.fillText(nombre + (e.fases > 1 ? '  ·  FASE ' + e.fase + '/' + e.fases : ''), cx, y + 24);
     ctx.restore();
   }

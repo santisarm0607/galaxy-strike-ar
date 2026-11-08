@@ -23,8 +23,8 @@
   P.LOGROS = [
     { id: 'primer_alien', icono: '👾', nombre: 'Primer contacto', desc: 'Destruye tu primer alien.' },
     { id: 'combo10', icono: '🔥', nombre: 'Imparable', desc: 'Haz un combo de 10.' },
-    { id: 'cazajefes', icono: '🛸', nombre: 'Cazajefes', desc: 'Destruye una nave nodriza en Disparos AR.' },
-    { id: 'sobreviviente', icono: '🛡️', nombre: 'Sobreviviente', desc: 'Sobrevive a una nave nodriza en Esquiva marcianos.' },
+    { id: 'cazajefes', icono: '🛸', nombre: 'Cazajefes', desc: 'Derrota a un jefe en Disparos AR.' },
+    { id: 'sobreviviente', icono: '🛡️', nombre: 'Sobreviviente', desc: 'Sobrevive a un jefe en Esquiva marcianos.' },
     { id: 'esquivador', icono: '💨', nombre: 'Por un pelo', desc: 'Logra 25 «¡por poco!» en una partida.' },
     { id: 'meteorologo', icono: '☄️', nombre: 'Meteorólogo', desc: 'Esquiva 30 meteoros en Disparos AR (en total).' },
     { id: 'coleccionista', icono: '💎', nombre: 'Coleccionista', desc: 'Junta 100 cristales (en total).' },
@@ -35,7 +35,8 @@
     { id: 'conquistador', icono: '👑', nombre: 'Conquistador', desc: 'Completa los 4 sectores de un modo.' },
     { id: 'leyenda', icono: '🏆', nombre: 'Leyenda', desc: 'Haz 25.000 puntos en una partida.' },
     { id: 'campeon', icono: '🥇', nombre: 'Campeón', desc: 'Gana una partida en línea.' },
-    { id: 'en_equipo', icono: '🤝', nombre: 'Trabajo en equipo', desc: 'Cumple la meta en una partida cooperativa.' }
+    { id: 'en_equipo', icono: '🤝', nombre: 'Trabajo en equipo', desc: 'Cumple la meta en una partida cooperativa.' },
+    { id: 'retador', icono: '📅', nombre: 'Retador', desc: 'Juega el reto del día.' }
   ];
 
   const est = leer('gs_progreso', { logros: {}, cont: {} });
@@ -74,6 +75,7 @@
       case 'puntos': if (valor >= 25000) lograr('leyenda'); break;
       case 'victoriaOnline': sumar('victorias'); lograr('campeon'); break;
       case 'metaCoop': lograr('en_equipo'); break;
+      case 'reto': lograr('retador'); break;
     }
   };
 
@@ -159,10 +161,12 @@
         return r.ok;
       } catch (e) { return false; }
     },
-    async leer(tipo) {
+    /** Top 10 mundial. desde (opcional): solo los puntajes desde esa fecha ISO (para el reto del día). */
+    async leer(tipo, desde) {
       if (!P.global.activo()) return null;
       try {
-        const url = cfg().supabaseUrl.replace(/\/$/, '') + '/rest/v1/records?select=nombre,puntos&tipo=eq.' + encodeURIComponent(tipo) + '&order=puntos.desc&limit=10';
+        let url = cfg().supabaseUrl.replace(/\/$/, '') + '/rest/v1/records?select=nombre,puntos&tipo=eq.' + encodeURIComponent(tipo) + '&order=puntos.desc&limit=10';
+        if (desde) url += '&creado=gte.' + encodeURIComponent(desde);
         const r = await fetch(url, { headers: cabeceras() });
         if (!r.ok) return null;
         const d = await r.json();

@@ -1,4 +1,4 @@
-# 🛸 GALAXY STRIKE AR · versión 2
+# 🛸 GALAXY STRIKE AR · versión 3
 
 Juego de aliens en 3D con **dos modos**:
 
@@ -13,7 +13,34 @@ Hecho por **SantiSarm** con HTML, CSS y JavaScript puro (sin frameworks).
 
 ---
 
-## 🆕 Qué trae la versión 2
+## 🆕 Qué trae la versión 3
+
+| | |
+|---|---|
+| 👑 **4 jefes distintos** | Cada sector termina con su propio jefe (ver la tabla de abajo). En el Infinito se turnan. |
+| 📅 **Reto del día** | Una partida especial cada día, **igual para todos**, con un modificador distinto. Cuenta tu mejor intento del día. |
+| 💥 **Golpes que se sienten** | Micro-pausa al destruir o recibir daño, un **arco rojo** en el borde que te dice de dónde vino el golpe y vibraciones distintas para cada cosa. |
+| ✋ **Cámara: modo sentado** | «Solo manos»: tu mano mueve la nave y dispara al frente. Cansa menos y sirve con la cámara cerca. |
+| 🔫 **Gatillo visible** | La mira se cierra y se pone rosada al bajar el pulgar, y un arco amarillo muestra cuánto falta. |
+| 🧍 **Guía para la cámara** | Una silueta en la pantalla de preparación que se pone verde cuando estás bien ubicado, con consejos («acércate», «muévete a tu derecha»…). |
+| 🧩 **Código ordenado** | La interfaz quedó dividida en módulos (carpeta `js/ui/`). |
+
+### Los jefes
+
+| Sector | Jefe | Disparos AR | Esquiva marcianos |
+|---|---|---|---|
+| 1 | 🛸 **Guardián lunar** | Ráfagas, abanico y drones. Al final, dispárale al **ojo**. | Orbes, abanico y láseres. |
+| 2 | 🪨 **El Rompe-rocas** | Te lanza **meteoros** (¡esquívalos!) y se cubre con una coraza: dispárale cuando se abra. Al final, su **núcleo de lava**. | Te lanza rocas y luego **filas de rocas** con un hueco. |
+| 3 | 🪼 **La Reina de la nebulosa** | Se **teletransporta** alrededor tuyo (sigue las flechas), lanza **anillos de plasma** y llama fantasmas. Al final, su **corazón**. | Salta de lado a lado, anillos de orbes (¡quédate quieto!) y cortinas de plasma. |
+| 4 | 👑 **Zorp, el emperador** | Cañones gemelos, refuerzos (drones y blindados) y todo su arsenal. Al final, dispárale a **Zorp en persona**. | Cañones, láseres imperiales y refuerzos. |
+
+### Reto del día
+
+En la pantalla de sectores está la tarjeta **📅 Reto del día**. Cada día cambia el modificador (lluvia de meteoros, solo 3 vidas, poderes de sobra, turbo o directo al jefe) y la partida es la misma para todos, así que pueden comparar puntajes en el salón. Puedes intentarlo las veces que quieras. Con Supabase activado, también hay **tabla mundial del día**.
+
+> La vibración solo funciona en Android: Safari en iPhone no deja vibrar desde una página web.
+
+## Qué trajo la versión 2
 
 | | |
 |---|---|
@@ -76,6 +103,13 @@ Dispárale a las **cápsulas** blancas para ganar un poder. Los combos multiplic
 
 En el menú, con *Esquiva marcianos* elegido, toca **Control: 🧍 Cámara**. Funciona en PC (webcam) y en celular (cámara frontal).
 
+Hay dos formas de jugar (se elige en la pantalla de la cámara o en **Ajustes → Control con cámara**):
+
+- **🧍 De pie:** tu cuerpo mueve la nave (lo de la tabla de abajo).
+- **✋ Sentado (solo manos):** la nave sigue a tu mano, como un mouse en el aire. Con la mano en pistola y el pulgar abajo dispara **al frente de la nave**. Si muestras la otra mano, también puedes apuntar con ella. Siéntate a unos 50 cm.
+
+La mira te muestra el gatillo: **verde** = mano en pistola, lista; el **arco amarillo** se llena a medida que bajas el pulgar; **rosada y cerrada** = ¡disparando! (con un destello en cada disparo).
+
 | Acción | Cómo |
 |---|---|
 | Mover la nave | Muévete de lado, agáchate o estírate: la nave te sigue |
@@ -84,9 +118,9 @@ En el menú, con *Esquiva marcianos* elegido, toca **Control: 🧍 Cámara**. Fu
 | Impulso | **Abre la mano** ✋ un momento |
 
 - Solo con cámara puedes **dispararle a los marcianos** (+50 con combo). Los **muros** y los **láseres** no se rompen: igual hay que pasar por el hueco.
-- A la **nave nodriza** también le puedes disparar: si la derribas antes de que se vaya ganas **+1000** extra (por sector).
+- A los **jefes** también les puedes disparar: si los derribas antes de que se vayan ganas **+1000** extra (por sector).
 - Sirve con cualquiera de las dos manos, o con las dos a la vez (una mira por mano).
-- Antes de jugar se abre una pantalla que pide permiso para la cámara y revisa que te vea. Al decir **¡YA!** en la cuenta regresiva, tu posición queda como el centro.
+- Antes de jugar se abre una pantalla que pide permiso para la cámara y te muestra una **silueta**: ponte dentro hasta que se ponga **verde** y sigue los consejos que salen debajo. Al decir **¡YA!** en la cuenta regresiva, tu posición queda como el centro.
 - En una esquina ves una mini ventana (como espejo) con tus puntos: si dice **«No te veo»**, vuelve frente a la cámara.
 - Consejos: aléjate 1–2 metros, con luz de frente y que se vean tus hombros. En el celular, apóyalo en algo.
 - Usa **MediaPipe** (de Google, gratis). La librería y los modelos (unos 15 MB) se descargan de internet la primera vez que eliges la cámara. Nada de tu cámara se envía a ningún lado: todo se procesa en tu equipo.
@@ -111,7 +145,7 @@ galaxy-strike-ar/
     ├── sensores.js      → cámara trasera, giroscopio y controles alternativos
     ├── sprites.js       → brillos y dibujos 2D de respaldo (si no hay WebGL)
     ├── motor3d.js       → motor 3D propio con WebGL
-    ├── modelos.js       → modelos 3D: ovni, dron, nave nodriza, nave, cápsulas, anillos, láseres…
+    ├── modelos.js       → modelos 3D: ovni, dron, los 4 jefes, nave, cápsulas, anillos, láseres…
     ├── sectores.js      → la campaña: sectores, colores y oleadas (¡fácil de editar!)
     ├── progreso.js      → sectores ganados, estrellas, logros, naves y récords
     ├── poderes.js       → los poderes y sus fichas en pantalla
@@ -120,7 +154,15 @@ galaxy-strike-ar/
     ├── esquiva.js       → modo Esquiva marcianos
     ├── tutorial.js      → tutorial interactivo
     ├── red.js           → multijugador en línea (PeerJS)
-    ├── interfaz.js      → botones, pantallas, HUD y salas
+    ├── jefes.js         → los 4 jefes: nombres, avisos y punto débil
+    ├── reto.js          → el reto del día (semilla y modificador de cada día)
+    ├── interfaz.js      → arranque de la interfaz
+    └── ui/              → la interfaz, dividida en módulos:
+        ├── base.js      → utilidades, pantallas, pantalla completa, permisos y cuenta regresiva
+        ├── partida.js   → HUD, eventos del juego, fin de partida, controles y pausa
+        ├── sala.js      → multijugador en línea, marcador, resultados y emojis
+        ├── menus.js     → botones, sectores, reto del día, perfil (logros, récords, naves) y ajustes
+        └── camara.js    → control con cámara: preparación, silueta guía y modos
     └── main.js          → arranque, bucle del juego y calidad automática
 ```
 
@@ -230,7 +272,7 @@ create table records (
   id bigint generated always as identity primary key,
   nombre text not null check (char_length(nombre) between 1 and 14),
   puntos integer not null check (puntos > 0 and puntos < 10000000),
-  tipo text not null check (tipo in ('ar', 'esquiva')),
+  tipo text not null check (tipo in ('ar', 'esquiva', 'reto_ar', 'reto_esquiva')),
   creado timestamptz not null default now()
 );
 alter table records enable row level security;
@@ -247,7 +289,14 @@ window.GS.CONFIG_GLOBAL = {
 };
 ```
 
-Listo: al terminar una partida del modo Infinito se envía el puntaje, y en **Logros → Récords** aparece la tabla 🌎 Mundial.
+Listo: al terminar una partida del modo Infinito o del reto del día se envía el puntaje, y en **Logros → Récords** aparecen la tabla 🌎 Mundial y la del reto de hoy.
+
+**¿Ya habías creado la tabla con la versión 2?** Ejecuta esto para que acepte también los puntajes del reto del día:
+
+```sql
+alter table records drop constraint records_tipo_check;
+alter table records add constraint records_tipo_check check (tipo in ('ar', 'esquiva', 'reto_ar', 'reto_esquiva'));
+```
 
 > Ojo: como el juego no tiene cuentas de usuario, alguien que sepa programar podría mandar puntajes falsos. Para un juego entre amigos está bien; si se vuelve popular, toca agregar validación.
 
@@ -262,7 +311,10 @@ Listo: al terminar una partida del modo Infinito se envía el puntaje, y en **Lo
 - **Poderes:** `TIPOS` en `js/poderes.js` (duración, ícono, color y en qué modo salen).
 - **Logros y naves:** `LOGROS` y `NAVES` en `js/progreso.js`.
 - **Dificultades:** `DIFICULTAD` en `js/ajustes.js`.
-- **Multijugador:** `DURACION_ONLINE`, `MAX_JUGADORES` y `META_COOP_POR_JUGADOR` en `js/interfaz.js`.
+- **Multijugador:** `DURACION_ONLINE`, `MAX_JUGADORES` y `META_COOP_POR_JUGADOR` en `js/ui/base.js`.
+- **Jefes:** nombres y avisos en `js/jefes.js`; sus ataques en `actualizarJefe` de `js/juego.js` y `js/esquiva.js`.
+- **Reto del día:** los modificadores (`MODS`) en `js/reto.js`.
+- **Vibraciones y micro-pausa:** `VIBRA` y `J.congelar` en `js/juego.js`.
 - **Música:** tempo y acordes al inicio de `js/musica.js`.
 
 Para borrar todo tu progreso: en el navegador, abre la consola (F12) y escribe `localStorage.clear()`.

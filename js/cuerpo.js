@@ -7,6 +7,10 @@
    - las MANOS: con la mano en forma de pistola apuntas con el
      índice y disparas bajando el pulgar; con la mano abierta
      usas el impulso.
+   Hay dos formas de jugar:
+   - 'cuerpo' (de pie): tu cuerpo mueve la nave.
+   - 'manos' (sentado): una mano mueve la nave y dispara al
+     frente; cansa menos y sirve con la cámara cerca.
    La librería y los modelos se descargan de internet solo
    cuando eliges este control (la primera vez tarda un poco).
    ========================================================= */
@@ -32,6 +36,8 @@
     gatilloAbajo: 0.42,  // pulgar pegado al índice (menos que esto) = disparar
     gatilloArriba: 0.58, // pulgar levantado (más que esto) = dejar de disparar
     abiertaSeg: 0.18,    // segundos con la mano abierta para el impulso
+    rangoManoX: 0.26,    // modo «solo manos»: cuánto mueves la mano (fracción de la imagen) para llegar al borde
+    rangoManoY: 0.2,
     fpsPC: 30,           // detecciones por segundo en PC
     fpsCelular: 15,      // y en celular (para que no se caliente)
     lentoMs: 160         // si cada detección tarda más que esto, el equipo va lento
@@ -40,6 +46,9 @@
   const C = (GS.Cuerpo = {
     CFG,
     estado: 'apagado',  // apagado | cargando | listo | error
+    modo: (function () { try { return localStorage.getItem('gs_cam_modo') === 'manos' ? 'manos' : 'cuerpo'; } catch (e) { return 'cuerpo'; } })(),
+    guia: false,        // la interfaz lo pone en true en la pantalla de preparación (dibuja la silueta)
+    gatilloProbado: false,
     error: '',
     persona: false,     // ¿se ve a alguien frente a la cámara?
     x: 0, y: 0,         // posición del cuerpo (-1..1) respecto al centro calibrado
@@ -57,6 +66,7 @@
   let video = null, stream = null, pose = null, manosLM = null, cargando = null;
   let corriendo = false, tUltimo = -1, tVideo = -1, tiempos = [];
   let crudo = null, centro = null, tSinPersona = 0, ultimoPose = null, ultimasManos = [];
+  let centroMano = null, pilotoId = null; // modo «solo manos»
   const estadoMano = {};
 
   function progreso(txt) { if (C.alProgreso) try { C.alProgreso(txt); } catch (e) { /* nada */ } }
@@ -132,11 +142,29 @@
     C.persona = false;
     C.manos = [];
     centro = crudo = null;
+    centroMano = null;
+    pilotoId = null;
     Object.keys(estadoMano).forEach((k) => delete estadoMano[k]);
+  };
+
+  /** Cambia entre 'cuerpo' (de pie) y 'manos' (sentado). */
+  C.elegirModo = function (m) {
+    C.modo = m === 'manos' ? 'manos' : 'cuerpo';
+    try { localStorage.setItem('gs_cam_modo', C.modo); } catch (e) { /* nada */ }
+    centro = centroMano = null;
+    pilotoId = null;
+    C.x = C.y = 0;
+    C.persona = false;
   };
 
   /** Toma tu posición actual como el centro. */
   C.calibrar = function () {
+    if (C.modo === 'manos') {
+      const p = estadoMano[pilotoId];
+      centroMano = p ? { x: p.px, y: p.py } : { x: 0.5, y: 0.55 };
+      C.x = 0; C.y = 0;
+      return !!p;
+    }
     if (!crudo) return false;
     centro = { x: crudo.x, y: crudo.y, ancho: Math.max(0.06, crudo.ancho) };
     C.x = 0; C.y = 0;
@@ -168,7 +196,8 @@
     let rp = null, rm = null;
     const t0 = performance.now();
     try {
-      rp = pose.detectForVideo(video, ahora);
+      // En «solo manos» no hace falta buscar el cuerpo: va más rápido
+      rp = C.modo === 'manos' ? null : pose.detectForVideo(video, ahora);
       rm = manosLM.detectForVideo(video, ahora);
     } catch (e) { console.warn(e); return; }
     medir(performance.now() - t0);
@@ -191,7 +220,9 @@
     // ---- Cuerpo: punto medio de los hombros (11 y 12) ----
     const lm = rp && rp.landmarks && rp.landmarks[0];
     ultimoPose = lm || null;
-    if (lm && visible(lm[11]) && visible(lm[12])) {
+    if (C.modo === 'manos') {
+      // nada: en este modo la nave la mueve la mano (más abajo)
+    } else if (lm && visible(lm[11]) && visible(lm[12])) {
       crudo = {
         x: 1 - (lm[11].x + lm[12].x) / 2, // 1 - x: como un espejo (te mueves a la derecha y la nave va a la derecha)
         y: (lm[11].y + lm[12].y) / 2,
@@ -230,7 +261,58 @@
       st.perdida = (st.perdida || 0) + dt;
       if (st.perdida > 0.35) delete estadoMano[id];
     });
-    C.manos = Object.values(estadoMano).filter((s) => !s.perdida).map((s) => ({ id: s.id, x: s.x, y: s.y, pistola: s.pistola, gatillo: s.pistola && s.gatillo, abierta: s.abierta }));
+    // ---- Modo «solo manos»: una mano (la piloto) mueve la nave ----
+    if (C.modo === 'manos') {
+      if (!estadoMano[pilotoId] || estadoMano[pilotoId].perdida) {
+        const libre = Object.values(estadoMano).find((st) => !st.perdida);
+        pilotoId = libre ? libre.id : null;
+      }
+      const pl = estadoMano[pilotoId];
+      if (pl && !pl.perdida) {
+        if (!centroMano) centroMano = { x: pl.px, y: pl.py };
+        const nx = U.clamp((pl.px - centroMano.x) / CFG.rangoManoX, -1, 1);
+        const ny = U.clamp((centroMano.y - pl.py) / CFG.rangoManoY, -1, 1);
+        const k = 1 - Math.exp(-dt * CFG.suavizadoCuerpo);
+        C.x += (nx - C.x) * k;
+        C.y += (ny - C.y) * k;
+        C.persona = true;
+        tSinPersona = 0;
+      } else {
+        tSinPersona += dt;
+        if (tSinPersona > 0.7) C.persona = false;
+      }
+    }
+    C.manos = Object.values(estadoMano).filter((s) => !s.perdida).map((s) => ({
+      id: s.id, x: s.x, y: s.y, pistola: s.pistola, gatillo: s.pistola && s.gatillo, abierta: s.abierta,
+      carga: s.pistola ? s.carga : 0, piloto: C.modo === 'manos' && s.id === pilotoId
+    }));
+    if (C.manos.some((m) => m.gatillo)) C.gatilloProbado = true;
+  };
+
+  /** Consejo para la pantalla de preparación: { ok, texto }. */
+  C.consejo = function () {
+    const pistola = C.manos.some((m) => m.pistola);
+    if (C.modo === 'manos') {
+      if (!C.persona) return { ok: false, texto: '✋ Muestra una mano a la cámara (a unos 50 cm).' };
+      if (!pistola && !C.gatilloProbado) return { ok: true, texto: '🔫 ¡Te veo! Ahora haz una pistola con la mano.' };
+      if (!C.gatilloProbado) return { ok: true, texto: '👍 Baja el pulgar como un gatillo para probar.' };
+      return { ok: true, texto: '✅ ¡Listo! Mueve la mano para mover la nave.' };
+    }
+    if (!C.persona || !crudo) return { ok: false, texto: '🧍 Párate frente a la cámara, que se vean tus hombros…' };
+    if (crudo.ancho < 0.14) return { ok: true, texto: '🔍 Acércate un poco a la cámara.' };
+    if (crudo.ancho > 0.42) return { ok: true, texto: '↩️ Aléjate un poco: así te puedes mover más.' };
+    if (crudo.x < 0.33) return { ok: true, texto: '➡️ Muévete un poco a tu derecha, al centro de la silueta.' };
+    if (crudo.x > 0.67) return { ok: true, texto: '⬅️ Muévete un poco a tu izquierda, al centro de la silueta.' };
+    if (crudo.y < 0.28) return { ok: true, texto: '⬇️ Baja un poco la cámara (o aléjate).' };
+    if (crudo.y > 0.78) return { ok: true, texto: '⬆️ Sube un poco la cámara.' };
+    if (!pistola && !C.gatilloProbado) return { ok: true, texto: '✅ ¡Perfecto! Prueba a hacer una pistola con la mano.' };
+    if (!C.gatilloProbado) return { ok: true, texto: '👍 Baja el pulgar como un gatillo para probar.' };
+    return { ok: true, texto: '✅ ¡Perfecto! Quédate ahí y empieza.' };
+  };
+  /** ¿Está bien ubicado? (para pintar la silueta de verde) */
+  C.bienUbicado = function () {
+    if (C.modo === 'manos') return C.persona;
+    return !!(C.persona && crudo && crudo.ancho >= 0.14 && crudo.ancho <= 0.42 && crudo.x >= 0.33 && crudo.x <= 0.67 && crudo.y >= 0.28 && crudo.y <= 0.78);
   };
 
   /** ¿El dedo está estirado? (la punta está más lejos de la muñeca que la articulación del medio) */
@@ -246,6 +328,11 @@
     const pulgar = Math.min(dist(m[4], m[5]), dist(m[4], m[6])) / tam;
     if (pulgar < CFG.gatilloAbajo) st.gatillo = true;
     else if (pulgar > CFG.gatilloArriba) st.gatillo = false;
+    // Qué tan cerca está el pulgar de disparar (0 = arriba, 1 = gatillo): se ve en la mira
+    st.carga = st.gatillo ? 1 : U.clamp((CFG.gatilloArriba + 0.15 - pulgar) / (CFG.gatilloArriba + 0.15 - CFG.gatilloAbajo), 0, 1);
+    // Centro de la palma (modo «solo manos»)
+    st.px = 1 - (m[0].x * 0.4 + m[9].x * 0.6);
+    st.py = m[0].y * 0.4 + m[9].y * 0.6;
 
     // Mira: entre la base y la punta del índice (así no salta al bajar el pulgar)
     const px = 1 - (m[8].x * 0.6 + m[5].x * 0.4);
@@ -271,6 +358,39 @@
   }
 
   /* ---------------- Mini ventana (espejo con tus puntos) ---------------- */
+  C.dibujarMini = () => dibujarMini(); // (también sirve para pruebas)
+  /** Silueta donde debes ponerte (verde cuando estás bien ubicado). */
+  function dibujarSilueta(g, w, h) {
+    const ok = C.bienUbicado();
+    g.save();
+    g.lineWidth = 3;
+    g.setLineDash(ok ? [] : [9, 7]);
+    g.strokeStyle = ok ? 'rgba(124,255,79,0.95)' : 'rgba(255,255,255,0.75)';
+    g.fillStyle = ok ? 'rgba(124,255,79,0.12)' : 'rgba(255,255,255,0.06)';
+    g.beginPath();
+    if (C.modo === 'manos') {
+      // Recuadro para la mano, en el centro
+      const bw = w * 0.42, bh = h * 0.5, x = w / 2 - bw / 2, y = h * 0.28;
+      g.rect(x, y, bw, bh);
+      g.fill(); g.stroke();
+      g.setLineDash([]);
+      g.font = Math.round(h * 0.16) + 'px sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.globalAlpha = ok ? 0.25 : 0.6;
+      g.fillText('✋', w / 2, y + bh / 2);
+    } else {
+      // Cabeza y hombros
+      const cx = w / 2, r = h * 0.085;
+      g.arc(cx, h * 0.3, r, 0, Math.PI * 2);
+      g.moveTo(cx - w * 0.17, h * 0.98);
+      g.bezierCurveTo(cx - w * 0.17, h * 0.6, cx - w * 0.15, h * 0.5, cx, h * 0.48);
+      g.bezierCurveTo(cx + w * 0.15, h * 0.5, cx + w * 0.17, h * 0.6, cx + w * 0.17, h * 0.98);
+      g.fill(); g.stroke();
+    }
+    g.restore();
+  }
+
   const CONEXIONES_MANO = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]];
   function dibujarMini() {
     const lz = document.getElementById('lienzoCuerpo');
@@ -281,6 +401,7 @@
     g.clearRect(0, 0, w, h);
     // El video se ve como espejo (CSS); los puntos también se voltean.
     const P = (p) => [(1 - p.x) * w, p.y * h];
+    if (C.guia) dibujarSilueta(g, w, h);
     if (ultimoPose) {
       g.strokeStyle = 'rgba(56,248,255,0.9)';
       g.lineWidth = 3;

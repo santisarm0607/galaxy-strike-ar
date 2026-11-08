@@ -39,7 +39,8 @@
   function pasosEsquiva() {
     const E = GS.Esquiva;
     const cam = E.camara;
-    const mover = cam ? 'muévete de lado o agáchate' : esPC() ? 'mouse o WASD' : 'arrastra el dedo';
+    const soloManos = cam && GS.Cuerpo && GS.Cuerpo.modo === 'manos';
+    const mover = soloManos ? 'mueve la mano' : cam ? 'muévete de lado o agáchate' : esPC() ? 'mouse o WASD' : 'arrastra el dedo';
     const anillo = () => { const L = E.tut.limites(); E.tut.anillo((Math.random() < 0.5 ? -1 : 1) * L.x * 0.5, (Math.random() - 0.3) * L.y); };
     const blanco = () => { const n = E.tut.nave(), L = E.tut.limites(); E.tut.dron(U.clamp(-n.x * 0.6, -L.x, L.x), U.clamp(n.y * 0.4 + 0.8, -L.y, L.y), -75); };
     const impulso = cam ? 'abre la mano ✋' : esPC() ? 'clic o Espacio' : 'botón IMPULSO';
@@ -53,7 +54,7 @@
         },
         tutPaso: () => { contador++; if (contador >= 4) siguiente(); } },
       // Solo con cámara: dispararle a un marciano con la mano
-      ...(cam ? [{ texto: '🔫 Haz una pistola con la mano (índice estirado, pulgar arriba), apunta al marciano y baja el pulgar para disparar.',
+      ...(cam ? [{ texto: (soloManos ? '🔫 Haz una pistola con la mano, pon la nave frente al marciano y baja el pulgar para disparar.' : '🔫 Haz una pistola con la mano (índice estirado, pulgar arriba), apunta al marciano y baja el pulgar para disparar.'),
         entrar: blanco, tutDisparo: siguiente, tutPaso: () => despues(300, blanco) }] : []),
       { texto: '💨 Usa el impulso (' + impulso + '): mientras dura, nada te hace daño.', tutImpulso: siguiente },
       { texto: '⚡ Atraviesa la cápsula para ganar un poder.',

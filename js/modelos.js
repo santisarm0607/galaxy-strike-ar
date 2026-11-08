@@ -117,6 +117,82 @@
     }
     MOD.jefe = jefe;
 
+    /* ---------- EL ROMPE-ROCAS (jefe del sector 2) ----------
+       Un coloso de roca con un núcleo de lava y rocas que lo orbitan. */
+    const rocaOscura = [0.36, 0.28, 0.24];
+    const lava = [1, 0.5, 0.12];
+    const coloso = [
+      pieza(malla('colosoCuerpo', () => G.roca(1, 31)), rocaOscura, { esc: [1.05, 0.92, 0.9], brillo: 0.12, rol: 'roca' }),
+      pieza(esfera, lava, { pos: [0, 0.02, 0.78], esc: 0.3, emisivo: 1, rol: 'nucleo' }),
+      pieza(malla('colosoMarco', () => G.toro(0.33, 0.07, 28, 8)), [0.24, 0.17, 0.13], { pos: [0, 0.02, 0.8], rot: rotX(Math.PI / 2), brillo: 0.2 }),
+      pieza(malla('colosoLava', () => G.toro(1.02, 0.05, 48, 8)), lava, { pos: [0, -0.32, 0], emisivo: 1, rol: 'aro', giro: 0.35 })
+    ];
+    [-1, 1].forEach((lado, i) => {
+      coloso.push(pieza(esfera, [1, 0.62, 0.2], { pos: [lado * 0.32, 0.42, 0.76], rot: rotZ(lado * 0.35), esc: [0.12, 0.06, 0.05], emisivo: 1, rol: 'ojo' }));
+      coloso.push(pieza(malla('colosoCeja' + i, () => G.roca(1, 40 + i)), rocaOscura, { pos: [lado * 0.32, 0.56, 0.72], rot: rotZ(-lado * 0.3), esc: [0.22, 0.08, 0.1], brillo: 0.1 }));
+      coloso.push(pieza(malla('colosoBrazo' + i, () => G.roca(1, 5 + i * 4)), [0.42, 0.33, 0.27], { pos: [lado * 1.18, -0.28, 0.15], esc: 0.5, brillo: 0.12, rol: 'roca' }));
+      coloso.push(pieza(esferaChica, lava, { pos: [lado * 1.18, -0.28, 0.58], esc: 0.09, emisivo: 1, rol: 'nucleo' }));
+    });
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      coloso.push(pieza(malla('rocaChica' + (i % 3), () => G.roca(1, 60 + (i % 3))), [0.46, 0.36, 0.28], {
+        pos: [Math.cos(a) * 1.75, 0.15 + (i % 2) * 0.35, Math.sin(a) * 1.75], esc: 0.2 + (i % 3) * 0.04, brillo: 0.15, giro: 0.7, rol: 'orbita'
+      }));
+    }
+    MOD.coloso = coloso;
+
+    /* ---------- LA REINA DE LA NEBULOSA (jefe del sector 3) ----------
+       Una medusa de plasma transparente con un corazón que brilla. */
+    const medusa = [
+      pieza(malla('medusaCampana', () => G.elipsoide(1, 0.78, 1, 30, 14, 0, 0.5)), [0.78, 0.36, 0.98], { alfa: 0.5, brillo: 1, emisivo: 0.25, rol: 'domo' }),
+      pieza(esfera, [0.4, 1, 0.92], { pos: [0, 0.18, 0], esc: 0.36, emisivo: 1, rol: 'nucleo' }),
+      pieza(malla('medusaBorde', () => G.toro(1.0, 0.07, 48, 8)), [1, 0.4, 0.85], { emisivo: 0.9, rol: 'aro' }),
+      pieza(malla('medusaVelo', () => G.elipsoide(0.82, 0.14, 0.82, 26, 8)), [1, 0.55, 0.9], { pos: [0, -0.06, 0], alfa: 0.55, emisivo: 0.5, rol: 'aro' })
+    ];
+    [-1, 1].forEach((lado) => {
+      medusa.push(pieza(esfera, COLOR.negro, { pos: [lado * 0.3, 0.42, 0.79], rot: rotZ(-lado * 0.4), esc: [0.1, 0.15, 0.05], brillo: 1, rol: 'ojos' }));
+      medusa.push(pieza(esferaChica, COLOR.blanco, { pos: [lado * 0.27, 0.48, 0.84], esc: 0.03, emisivo: 1 }));
+    });
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      medusa.push(pieza(esferaChica, i % 2 ? COLOR.cian : COLOR.magenta, { pos: [Math.cos(a) * 1.0, 0.02, Math.sin(a) * 1.0], esc: 0.07, emisivo: 1, parpadeo: i % 2, giro: 0.6 }));
+    }
+    const tentaculo = malla('tentaculo', () => G.cilindro(0.07, 0.02, 1.5, 8));
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + 0.2;
+      medusa.push(pieza(tentaculo, [0.95, 0.55, 1], {
+        pos: [Math.cos(a) * 0.68, -0.82, Math.sin(a) * 0.68], rot: Q.mult(rotY(-a), rotZ(0.18)), alfa: 0.75, emisivo: 0.45, giro: 0.25, rol: 'tentaculo'
+      }));
+    }
+    MOD.medusa = medusa;
+
+    /* ---------- ZORP, EL EMPERADOR (jefe final) ----------
+       La nave insignia, con Zorp en persona bajo una cúpula. */
+    const casco = [0.42, 0.1, 0.16], oro = [1, 0.78, 0.25];
+    const emperador = [
+      pieza(malla('empCasco', () => G.elipsoide(1.45, 0.3, 1.0, 32, 12)), casco, { brillo: 0.9, rol: 'disco' }),
+      pieza(malla('empCubierta', () => G.elipsoide(0.85, 0.32, 0.65, 26, 10, 0, 0.5)), [0.26, 0.06, 0.1], { pos: [0, 0.12, -0.15], brillo: 0.8, rol: 'domo' }),
+      pieza(malla('empFranja', () => G.toro(1.2, 0.035, 56, 6)), oro, { pos: [0, 0.02, 0], esc: [1, 1, 0.72], emisivo: 0.9, rol: 'aro' }),
+      pieza(malla('empCabeza', () => G.elipsoide(0.2, 0.25, 0.2, 18, 12)), COLOR.verdeAlien, { pos: [0, 0.56, 0.24], brillo: 0.5, rol: 'piloto' }),
+      pieza(malla('empCupula', () => G.elipsoide(0.42, 0.42, 0.42, 24, 10, 0, 0.5)), COLOR.vidrio, { pos: [0, 0.32, 0.22], alfa: 0.32, brillo: 1, rol: 'cupula' })
+    ];
+    [-1, 1].forEach((lado) => {
+      emperador.push(pieza(esferaChica, COLOR.negro, { pos: [lado * 0.08, 0.6, 0.4], rot: rotZ(lado * 0.5), esc: [0.06, 0.09, 0.04], brillo: 1 }));
+      emperador.push(pieza(malla('empCanon', () => G.cilindro(0.09, 0.13, 0.75, 12)), COLOR.metal, { pos: [lado * 1.15, -0.02, 0.35], rot: rotX(Math.PI / 2), brillo: 1 }));
+      emperador.push(pieza(esferaChica, COLOR.rojo, { pos: [lado * 1.15, -0.02, 0.74], esc: 0.12, emisivo: 1, rol: 'nucleo' }));
+      emperador.push(pieza(malla('empMotor', () => G.elipsoide(0.22, 0.12, 0.12, 14, 8)), [0.35, 0.95, 1], { pos: [lado * 0.55, 0, -0.98], emisivo: 1, rol: 'motor' }));
+      emperador.push(pieza(esfera, [0.26, 0.06, 0.1], { pos: [lado * 1.02, 0.18, -0.3], esc: [0.05, 0.36, 0.42], brillo: 0.8, rol: 'domo' }));
+    });
+    for (let i = 0; i < 3; i++) {
+      // Corona de Zorp
+      emperador.push(pieza(malla('pico', () => G.cilindro(0, 0.045, 0.17, 8)), oro, { pos: [(i - 1) * 0.09, 0.84, 0.24], rot: rotZ((1 - i) * 0.3), emisivo: 0.6, brillo: 1 }));
+    }
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      emperador.push(pieza(esferaChica, i % 2 ? COLOR.rojo : oro, { pos: [Math.cos(a) * 1.4, -0.04, Math.sin(a) * 0.97], esc: 0.05, emisivo: 1, parpadeo: i % 2 }));
+    }
+    MOD.emperador = emperador;
+
     /* ---------- ORBE de plasma ---------- */
     MOD.orbe = [pieza(esfera, [1, 0.45, 0.95], { esc: 0.75, emisivo: 1 })];
 

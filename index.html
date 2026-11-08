@@ -138,7 +138,7 @@
   <section class="pantalla" id="pComo">
     <div class="panel panel-como">
       <h2>Cómo se juega</h2>
-      <p class="nota">Elige un <b>sector</b> de la campaña (5 oleadas y un jefe cada uno) o el modo <b>♾️ Infinito</b> para batir récords. Gana hasta ★★★ terminando un sector sin perder vidas.</p>
+      <p class="nota">Elige un <b>sector</b> de la campaña (5 oleadas y un jefe cada uno) , el <b>📅 reto del día</b> (igual para todos) o el modo <b>♾️ Infinito</b> para batir récords. Gana hasta ★★★ terminando un sector sin perder vidas.</p>
       <h3 class="subtitulo">🎯 Disparos AR <small>(celular)</small></h3>
       <div class="pasos">
         <div class="paso"><span class="ico">📱</span><b>Apunta</b><small>Mueve el celular como si fuera tu arma. La mira está en el centro.</small></div>
@@ -152,7 +152,7 @@
         <div><i class="punto naranja"></i>Divisor · al destruirlo se parte en dos</div>
         <div><i class="punto cian"></i>Fantasma · desaparece y aparece en otro lado</div>
         <div><i class="punto azul"></i>Blindado · su escudo aguanta un disparo</div>
-        <div><i class="punto morado"></i>Nave nodriza · 3 fases; al final dispárale al ojo</div>
+        <div><i class="punto morado"></i>Jefes · uno por sector; en su última fase muestran su punto débil (el círculo rojo)</div>
         <div><i class="punto rojo"></i>Meteoro · indestructible · ¡esquívalo!</div>
       </div>
       <h3 class="subtitulo">⚡ Poderes <small>(dispárale o atraviesa la cápsula)</small></h3>
@@ -266,6 +266,10 @@
           <div class="segmentos" data-ajuste="vibracion"><button data-valor="true">📳 Sí</button><button data-valor="false">📴 No</button></div>
         </div>
         <div class="ajuste">
+          <span class="etq">Control con cámara</span>
+          <div class="segmentos" data-ajuste="camModo"><button data-valor="cuerpo">🧍 De pie</button><button data-valor="manos">✋ Sentado</button></div>
+        </div>
+        <div class="ajuste">
           <span class="etq">Botones para</span>
           <div class="segmentos" data-ajuste="zurdo"><button data-valor="false">🫱 Diestros</button><button data-valor="true">🫲 Zurdos</button></div>
         </div>
@@ -329,13 +333,12 @@
     <div class="panel panel-camara">
       <h2>Control con cámara</h2>
       <div id="huecoCam"></div>
+      <div class="selector-control selector-cam" role="group" aria-label="Cómo jugar con la cámara">
+        <button id="camModoCuerpo">🧍 De pie</button>
+        <button id="camModoManos">✋ Sentado (solo manos)</button>
+      </div>
       <p class="estado-cam" id="txtCamEstado">📷 Preparando la cámara…</p>
-      <ul class="lista-cam">
-        <li>🧍 <b>Muévete</b> de lado o agáchate: la nave te sigue.</li>
-        <li>🔫 <b>Mano en pistola</b> (índice estirado): apuntas. <b>Baja el pulgar</b>: disparas.</li>
-        <li>✋ <b>Mano abierta</b>: impulso.</li>
-        <li>💡 Aléjate 1–2 metros, con luz de frente y que se vean tus hombros.</li>
-      </ul>
+      <ul class="lista-cam" id="listaCam"></ul>
       <div class="fila-botones">
         <button class="btn btn-primario" id="btnCamListo" disabled>Esperando…</button>
         <button class="btn btn-texto" id="btnCamCancelar">Usar control normal</button>
@@ -379,12 +382,19 @@
   <script src="js/modelos.js"></script>
   <script src="js/sectores.js"></script>
   <script src="js/progreso.js"></script>
+  <script src="js/jefes.js"></script>
+  <script src="js/reto.js"></script>
   <script src="js/poderes.js"></script>
   <script src="js/juego.js"></script>
   <script src="js/cuerpo.js"></script>
   <script src="js/esquiva.js"></script>
   <script src="js/tutorial.js"></script>
   <script src="js/red.js"></script>
+  <script src="js/ui/base.js"></script>
+  <script src="js/ui/partida.js"></script>
+  <script src="js/ui/sala.js"></script>
+  <script src="js/ui/menus.js"></script>
+  <script src="js/ui/camara.js"></script>
   <script src="js/interfaz.js"></script>
   <script src="js/main.js"></script>
 </body>

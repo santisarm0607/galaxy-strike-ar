@@ -649,3 +649,18 @@ body.cam-grande #camCuerpo { display: block; position: relative; left: auto; bot
   .panel-camara .fila-botones { grid-column: 2; }
   #camCuerpo { width: 132px; }
 }
+
+/* ================= Reto del día ================= */
+.tarjeta-sector.reto { --c: #ffd23f; background: linear-gradient(160deg, rgba(255, 210, 63, 0.24), rgba(255, 61, 120, 0.14)); }
+.titulo-reto { font: 800 13px var(--titulo); color: var(--amarillo); margin: 16px 0 8px; text-align: left; }
+@media (orientation: landscape) and (max-height: 520px) {
+  .lista-sectores { grid-template-columns: repeat(3, 1fr); }
+  .tarjeta-sector { gap: 2px; }
+}
+
+/* Pantalla de cámara: De pie / Sentado */
+.selector-cam { margin: 0 auto 8px; max-width: 380px; }
+.selector-cam button { font-size: 12.5px; }
+@media (orientation: landscape) and (max-height: 520px) {
+  .panel-camara .selector-cam { grid-column: 2; margin: 0 0 6px; }
+}
