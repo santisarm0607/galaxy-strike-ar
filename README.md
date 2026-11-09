@@ -50,7 +50,7 @@ En la pantalla de sectores está la tarjeta **Reto del día**. Cada día cambia 
 | **Infinito** | Oleadas cada vez más difíciles; cada 5 hay nave nodriza. Guarda tu **top 10**. |
 | **Enemigos nuevos** | Divisor (se parte en dos), Fantasma (se teletransporta), Blindado (escudo que aguanta un disparo) y emboscadas por la espalda. |
 | **Jefes por fases** | La nave nodriza se enfurece, dispara en abanico y al final deja el **ojo expuesto**: dispárale ahí. |
-| **Poderes** | Cápsulas con Escudo, Cámara lenta, Puntos x2, Ráfaga, Bomba y Imán. |
+| **Poderes** | Cápsulas con Escudo, Cámara lenta, Puntos x2, Ráfaga, Bomba, Imán, Vida extra, Congelar, Rebote y Fantasma. |
 | **Esquiva** | Láseres con hueco, anillos dorados para sumar puntos, marcianos que se teletransportan. |
 | **15 logros** | Y **5 naves** que se desbloquean con ellos (cambian el color de tu nave y de tu láser). |
 | **Música** | Synthwave hecha por código que sube de intensidad y cambia con el jefe. |

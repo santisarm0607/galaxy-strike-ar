@@ -19,13 +19,18 @@
   function pintarControl() {
     $('ctrlNormal').classList.toggle('activo', st.control === 'normal');
     $('ctrlCamara').classList.toggle('activo', st.control === 'camara');
-    $('txtModoPista').textContent = st.tipoElegido === 'esquiva'
+    $('movLibre').classList.toggle('activo', st.movimiento !== 'carriles');
+    $('movCarriles').classList.toggle('activo', st.movimiento === 'carriles');
+    const pistaCarriles = st.control === 'camara'
+      ? ' Carriles: hazte a un lado para cambiar de carril; sube o agáchate.'
+      : ' Carriles: ←/→ cambias de carril, ↑ saltas, ↓ te agachas (o desliza el dedo).';
+    $('txtModoPista').textContent = st.tipoElegido === 'esquiva' && st.movimiento === 'carriles' ? pistaCarriles.trim() : (st.tipoElegido === 'esquiva'
       ? st.control === 'camara'
         ? GS.Cuerpo.modo === 'manos'
           ? 'Con cámara, sentado: tu mano mueve la nave y, en forma de pistola, dispara al frente.'
           : 'Con cámara: tu cuerpo mueve la nave y con la mano en pistola le disparas a los marcianos.'
         : 'Ideal para PC: mueve tu nave con el mouse y esquiva a los marcianos.'
-      : 'Para celular: apunta moviéndolo y dispara a los aliens en tu cuarto.';
+      : 'Para celular: apunta moviéndolo y dispara a los aliens en tu cuarto.');
   }
 
   function elegirControl(c) {
@@ -36,6 +41,14 @@
       GS.Esquiva.usarCamara(false);
       document.body.classList.remove('con-cuerpo');
     }
+    pintarControl();
+  }
+
+  /** Movimiento de Esquiva: libre (como siempre) o por 3 carriles. */
+  function elegirMovimiento(m) {
+    st.movimiento = m === 'carriles' ? 'carriles' : 'libre';
+    guardar('gs_movimiento', st.movimiento);
+    GS.Esquiva.usarCarriles(st.movimiento === 'carriles');
     pintarControl();
   }
 
@@ -120,8 +133,10 @@
       elegirControl('normal');
     };
     st.control = leer('gs_control', 'normal') === 'camara' ? 'camara' : 'normal';
+    st.movimiento = leer('gs_movimiento', 'libre') === 'carriles' ? 'carriles' : 'libre';
+    GS.Esquiva.usarCarriles(st.movimiento === 'carriles');
   }
 
 
-  Object.assign(K, { camaraEnUso, cerrarCamara, conCamara, elegirControl, pintarControl, pintarModoCam, prepararCuerpo });
+  Object.assign(K, { camaraEnUso, cerrarCamara, conCamara, elegirControl, elegirMovimiento, pintarControl, pintarModoCam, prepararCuerpo });
 })(window.GS);

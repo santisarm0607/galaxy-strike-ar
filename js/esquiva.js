@@ -61,6 +61,29 @@
   let derribos = 0, rayosJ = [], enfrMano = {}, fogonazos = {}; // control con cámara
   let jefesVistos = 0, offsetNivel = 0; // reto «Directo al jefe»: empieza más adelante
   E.camara = false;
+
+  /* ---------------- Modo CARRILES ----------------
+     3 carriles (izquierda, centro, derecha). ←/→ cambias de carril,
+     ↑ saltas y ↓ te agachas. En el tutorial se juega libre. */
+  E.carriles = false;
+  E.usarCarriles = function (on) { E.carriles = !!on; };
+  const CAR = { carril: 0, vert: 0, tVert: 0, enfr: 0, accX: 0, accY: 0, durSalto: 0.75, enfrSalto: 0.3 };
+  const enCarriles = () => E.carriles && !J.tutorial;
+  const anchoCarril = () => LX * 0.62;
+  const altoSalto = () => LY * 0.7;
+  /** Lleva una x al centro del carril más cercano (solo en modo carriles). */
+  const xCarril = (x) => (enCarriles() ? U.clamp(Math.round(x / anchoCarril()), -1, 1) * anchoCarril() : x);
+  function cambiarCarril(d) {
+    const antes = CAR.carril;
+    CAR.carril = U.clamp(CAR.carril + d, -1, 1);
+    if (CAR.carril !== antes) J.vibrar('disparo');
+  }
+  function saltar(dir) {
+    if (CAR.enfr > 0 || CAR.tVert > 0) return;
+    CAR.vert = dir;
+    CAR.tVert = CAR.durSalto;
+    J.vibrar('impulso');
+  }
   let sector = null, tema = null;
   let camQ = Q.identidad(), camInv = Q.identidad(), camPos = [0, 1.5, 8.5];
   let C = null; // capas de dibujo que presta juego.js
@@ -91,6 +114,7 @@
     Object.assign(nave, { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, t: 0 });
     obs = []; items = []; parts = []; textos = []; ataques = []; rayosJ = []; enfrMano = {}; fogonazos = {};
     jefe = null; impulsoT = 0; impulsoEnfr = 0;
+    Object.assign(CAR, { carril: 0, vert: 0, tVert: 0, enfr: 0, accX: 0, accY: 0 });
     if (!rayas.length) crearRayas();
   };
 
@@ -139,17 +163,40 @@
   const sens = () => (GS.Ajustes ? GS.Ajustes.get('sensibilidad') || 1 : 1);
   E.apuntar = function (mx, my, w, h) {
     if (!C) return;
+    if (enCarriles()) {
+      // Mouse: el tercio de la pantalla elige el carril; arriba saltas y abajo te agachas
+      CAR.carril = mx < w / 3 ? -1 : mx > (w * 2) / 3 ? 1 : 0;
+      if (my < h * 0.22) saltar(1); else if (my > h * 0.8) saltar(-1);
+      return;
+    }
     const k = sens();
     nave.tx = U.clamp((mx / w - 0.5) * 2 * LX * 1.15 * k, -LX, LX);
     nave.ty = U.clamp(-(my / h - 0.5) * 2 * LY * 1.25 * k, -LY, LY);
   };
   E.arrastrar = function (dx, dy, w, h) {
     if (!C) return;
+    if (enCarriles()) {
+      // Dedo: desliza a un lado para cambiar de carril, arriba para saltar, abajo para agacharte
+      CAR.accX += dx; CAR.accY += dy;
+      const umbral = Math.min(w, h) * 0.07;
+      if (Math.abs(CAR.accX) > umbral && Math.abs(CAR.accX) > Math.abs(CAR.accY)) { cambiarCarril(Math.sign(CAR.accX)); CAR.accX = 0; CAR.accY = 0; }
+      else if (Math.abs(CAR.accY) > umbral) { saltar(CAR.accY < 0 ? 1 : -1); CAR.accX = 0; CAR.accY = 0; }
+      return;
+    }
     const k = sens();
     nave.tx = U.clamp(nave.tx + dx * ((2 * LX) / w) * 1.4 * k, -LX, LX);
     nave.ty = U.clamp(nave.ty - dy * ((2 * LY) / h) * 1.8 * k, -LY, LY);
   };
-  E.tecla = function (nombre, on) { teclas[nombre] = on; };
+  E.tecla = function (nombre, on) {
+    // En carriles cuenta cada toque (no dejar la tecla apretada)
+    if (on && !teclas[nombre] && enCarriles() && J.estado === 'jugando') {
+      if (nombre === 'izq') cambiarCarril(-1);
+      else if (nombre === 'der') cambiarCarril(1);
+      else if (nombre === 'arriba') saltar(1);
+      else if (nombre === 'abajo') saltar(-1);
+    }
+    teclas[nombre] = on;
+  };
 
   /** Prende o apaga el control con cámara (cuerpo mueve la nave, manos disparan). */
   E.usarCamara = function (on) { E.camara = !!on; enfrMano = {}; };
@@ -239,7 +286,7 @@
     let dx = nave.tx - nave.x, dy = nave.ty - nave.y;
     if (Math.hypot(dx, dy) < 0.3) { dx = nave.vx; dy = nave.vy; }
     const l = Math.hypot(dx, dy);
-    if (l >= 0.05) { // si estás quieto, el impulso solo te protege
+    if (l >= 0.05 && !enCarriles()) { // si estás quieto (o en carriles), el impulso solo te protege
       dx /= l; dy /= l;
       nave.tx = U.clamp(nave.tx + dx * 3.2, -LX, LX);
       nave.ty = U.clamp(nave.ty + dy * 3.2, -LY, LY);
@@ -287,8 +334,8 @@
     const r = J.rng;
     const a = r(), b = r(), c = r(), d = r(), f = r();
     const apuntado = d < 0.35; // algunos vienen directo hacia donde estás
-    const x = apuntado ? U.clamp(nave.x + (b - 0.5) * 2, -LX, LX) : (b * 2 - 1) * LX;
-    const y = apuntado ? U.clamp(nave.y + (c - 0.5) * 1.6, -LY, LY) : (c * 2 - 1) * LY;
+    const x = xCarril(apuntado ? U.clamp(nave.x + (b - 0.5) * 2, -LX, LX) : (b * 2 - 1) * LX);
+    const y = enCarriles() ? 0 : apuntado ? U.clamp(nave.y + (c - 0.5) * 1.6, -LY, LY) : (c * 2 - 1) * LY;
     let pesos = config().pesos;
     if (J.esReto('meteoros')) pesos = Object.assign({}, pesos, { meteoro: (pesos.meteoro || 0) * 2 + 3 });
     const tipo = elegirTipo(pesos, a);
@@ -308,15 +355,15 @@
 
   /** Muro de marcianos con hueco: hay que pasar por el hueco. */
   function formacion() {
-    const r = J.rng, cols = 5, filas = 3;
+    const r = J.rng, cols = enCarriles() ? 3 : 5, filas = 3; // en carriles: 3x3, una casilla por carril y altura
     const h1 = Math.floor(r() * cols * filas), h2r = Math.floor(r() * cols * filas);
     const h2 = nivel < 6 && (!sector || sector.id < 4) ? h2r : -1;
     for (let j = 0; j < filas; j++) {
       for (let i = 0; i < cols; i++) {
         const k = j * cols + i;
         if (k === h1 || k === h2) continue;
-        const x = -LX + (i + 0.5) * ((2 * LX) / cols);
-        const y = -LY + (j + 0.5) * ((2 * LY) / filas);
+        const x = enCarriles() ? (i - 1) * anchoCarril() : -LX + (i + 0.5) * ((2 * LX) / cols);
+        const y = enCarriles() ? (j - 1) * altoSalto() : -LY + (j + 0.5) * ((2 * LY) / filas);
         obs.push({ tipo: 'dron', formacion: true, x, y, x0: x, y0: y, z: -CFG.distanciaAparicion, t: k * 0.3, fase: 0, extra: 0, radio: 0.85 });
       }
     }
@@ -328,9 +375,9 @@
   function laser(desdeJefe) {
     const r = J.rng;
     const a = r(), b = r();
-    const y = (a * 2 - 1) * LY * 0.85;
-    const hueco = (b * 2 - 1) * (LX - 1.8);
-    const mov = (sector && sector.id >= 4) || nivel >= 10 || desdeJefe ? 1.1 : 0;
+    const y = enCarriles() ? 0 : (a * 2 - 1) * LY * 0.85;
+    const hueco = xCarril((b * 2 - 1) * (LX - 1.8));
+    const mov = enCarriles() ? 0 : (sector && sector.id >= 4) || nivel >= 10 || desdeJefe ? 1.1 : 0;
     obs.push({ tipo: 'laser', x: 0, y, y0: y, z: desdeJefe ? jefe.z + 4 : -CFG.distanciaAparicion, t: 0, fase: a * TAU,
       hueco, anchoHueco: 3.4, mov, radio: 0.4, extra: desdeJefe ? 6 : 0 });
     GS.Sonido.laser();
@@ -338,19 +385,22 @@
 
   function aparecerAnillo() {
     const r = J.rng;
-    const x = (r() * 2 - 1) * (LX - 1.5), y = (r() * 2 - 1) * (LY - 1);
+    let x = (r() * 2 - 1) * (LX - 1.5), y = (r() * 2 - 1) * (LY - 1);
+    if (enCarriles()) { x = xCarril(x); y = y > LY * 0.4 ? altoSalto() : 0; } // algunos anillos piden saltar
     obs.push({ tipo: 'anillo', x, y, z: -CFG.distanciaAparicion, t: 0, radio: 1.6, extra: 0 });
   }
 
   function aparecerCapsula() {
     const r = J.rng;
-    const x = (r() * 2 - 1) * (LX - 1), y = (r() * 2 - 1) * (LY - 0.8);
+    let x = (r() * 2 - 1) * (LX - 1), y = (r() * 2 - 1) * (LY - 0.8);
+    if (enCarriles()) { x = xCarril(x); y = 0; }
     obs.push({ tipo: 'capsula', poder: GS.Poderes.azar('esquiva'), x, y, z: -CFG.distanciaAparicion, t: 0, radio: 0.7, extra: 0 });
   }
 
   function aparecerCristal() {
     const r = J.rng;
-    const x = (r() * 2 - 1) * LX * 0.9, y = (r() * 2 - 1) * LY * 0.9;
+    let x = (r() * 2 - 1) * LX * 0.9, y = (r() * 2 - 1) * LY * 0.9;
+    if (enCarriles()) { x = xCarril(x); y = 0; }
     items.push({ x, y, z: -CFG.distanciaAparicion, t: 0, radio: 0.45 });
   }
 
@@ -385,8 +435,9 @@
   /** Fila de rocas u orbes a tu altura, con un hueco por donde pasar. */
   function filaConHueco(tipo) {
     const r = J.rng;
-    const y = U.clamp(nave.y + (r() - 0.5) * 1.2, -LY, LY);
-    const hueco = (r() * 2 - 1) * (LX - 1.8);
+    const ry = r(); // siempre se llama (multijugador: misma lluvia para todos)
+    const y = enCarriles() ? 0 : U.clamp(nave.y + (ry - 0.5) * 1.2, -LY, LY);
+    const hueco = xCarril((r() * 2 - 1) * (LX - 1.8));
     const z = jefe.z + 4, rap = vel + 12;
     for (let x = -LX; x <= LX + 0.01; x += 1.45) {
       if (Math.abs(x - hueco) < 1.7) continue;
@@ -495,7 +546,7 @@
         ataques[i] -= dt;
         if (ataques[i] <= 0) {
           ataques.splice(i, 1);
-          const x = U.clamp(nave.x + U.rand(-1.5, 1.5), -LX, LX), y = U.clamp(nave.y + U.rand(-1, 1), -LY, LY);
+          const x = xCarril(U.clamp(nave.x + U.rand(-1.5, 1.5), -LX, LX)), y = enCarriles() ? 0 : U.clamp(nave.y + U.rand(-1, 1), -LY, LY);
           obs.push({ tipo: 'dron', x, y, x0: x, y0: y, z: -CFG.distanciaAparicion * 0.7, t: 0, fase: Math.random() * TAU, extra: 6, radio: 0.85 });
         }
       }
@@ -522,8 +573,8 @@
             // ¡Salta de lado!
             e.salto = true;
             explosion([e.x, e.y, e.z], 'teleport', 12);
-            e.x0 = U.clamp(e.x0 + (e.x0 > nave.x ? -1 : 1) * U.rand(2, 3.2), -LX, LX);
-            e.y0 = U.clamp(e.y0 + U.rand(-1, 1), -LY, LY);
+            e.x0 = xCarril(U.clamp(e.x0 + (e.x0 > nave.x ? -1 : 1) * U.rand(2, 3.2), -LX, LX));
+            e.y0 = enCarriles() ? 0 : U.clamp(e.y0 + U.rand(-1, 1), -LY, LY);
             explosion([e.x0, e.y0, e.z], 'teleport', 12);
             GS.Sonido.teleport();
           }
@@ -705,7 +756,7 @@
       if (jefe.tRefuerzo <= 0) {
         jefe.tRefuerzo = 5 * cad;
         [-1, 1].forEach((l) => {
-          const x = U.clamp(nave.x + l * 1.8, -LX, LX), y = U.clamp(nave.y + U.rand(-1, 1), -LY, LY);
+          const x = xCarril(U.clamp(nave.x + l * 1.8, -LX, LX)), y = enCarriles() ? 0 : U.clamp(nave.y + U.rand(-1, 1), -LY, LY);
           obs.push({ tipo: 'dron', x, y, x0: x, y0: y, z: jefe.z + 6, t: 0, fase: l, extra: 6, radio: 0.85 });
         });
       }
@@ -743,15 +794,30 @@
   }
 
   function moverNave(dt) {
+    if (enCarriles()) {
+      CAR.accX *= Math.exp(-dt * 4); CAR.accY *= Math.exp(-dt * 4);
+      if (E.camara && GS.Cuerpo && GS.Cuerpo.persona && J.estado !== 'pausa') {
+        // Cámara: hazte a un lado para cambiar de carril; sube o agáchate de verdad
+        const cx = GS.Cuerpo.x * sens(), cy = GS.Cuerpo.y * sens();
+        CAR.carril = cx > 0.33 ? 1 : cx < -0.33 ? -1 : 0;
+        CAR.vert = cy > 0.4 ? 1 : cy < -0.4 ? -1 : 0;
+        CAR.tVert = 0;
+      } else if (CAR.tVert > 0) {
+        CAR.tVert -= dt;
+        if (CAR.tVert <= 0) { CAR.vert = 0; CAR.enfr = CAR.enfrSalto; }
+      } else CAR.enfr -= dt;
+      nave.tx = CAR.carril * anchoCarril();
+      nave.ty = CAR.vert * altoSalto();
+    }
     // Control con cámara: la nave va a donde está tu cuerpo
-    if (E.camara && GS.Cuerpo && GS.Cuerpo.persona && J.estado !== 'pausa') {
+    else if (E.camara && GS.Cuerpo && GS.Cuerpo.persona && J.estado !== 'pausa') {
       const k = sens();
       nave.tx = U.clamp(GS.Cuerpo.x * LX * k, -LX, LX);
       nave.ty = U.clamp(GS.Cuerpo.y * LY * k, -LY, LY);
     }
     const kx = (teclas.der ? 1 : 0) - (teclas.izq ? 1 : 0);
     const ky = (teclas.arriba ? 1 : 0) - (teclas.abajo ? 1 : 0);
-    if (kx || ky) {
+    if ((kx || ky) && !enCarriles()) {
       nave.tx = U.clamp(nave.tx + kx * 13 * dt * sens(), -LX, LX);
       nave.ty = U.clamp(nave.ty + ky * 10 * dt * sens(), -LY, LY);
     }
@@ -781,7 +847,7 @@
   }
 
   function choque(e) {
-    if (J.invul > 0 || impulsoT > 0) return false; // atraviesas sin daño
+    if (J.invul > 0 || impulsoT > 0 || GS.Poderes.activo('fantasma')) return false; // atraviesas sin daño
     if (GS.Poderes.usarEscudo()) {
       J.marcarGolpe(anguloChoque(e), '56,248,255');
       J.vibrar('escudo');
@@ -924,6 +990,7 @@
 
   function naveVisible() {
     if (!J.vivo && J.estado !== 'cuenta') return false;
+    if (GS.Poderes.activo('fantasma')) return Math.floor(nave.t * 9) % 3 !== 0; // titila: eres un fantasma
     return !(J.invul > 0 && Math.floor(J.invul * 10) % 2 === 0);
   }
 
@@ -1058,6 +1125,14 @@
     for (let x = -40; x <= 40; x += 4) linea3D(g, [x, y, -220], [x, y, 12]);
     for (let z = -220 + sueloOffset; z <= 12; z += 5) linea3D(g, [-40, y, z], [40, y, z]);
     g.stroke();
+    if (enCarriles()) {
+      // Bordes de los 3 carriles, más brillantes
+      g.strokeStyle = t.suelo + '0.85)';
+      g.lineWidth = 2.5;
+      g.beginPath();
+      [-1.5, -0.5, 0.5, 1.5].forEach((k) => linea3D(g, [k * anchoCarril(), y, -220], [k * anchoCarril(), y, 12]));
+      g.stroke();
+    }
     g.restore();
   }
 

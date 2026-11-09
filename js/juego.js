@@ -168,6 +168,7 @@
     if (J.esReto('turbo')) J.dif = Object.assign({}, J.dif, { velocidad: J.dif.velocidad * 1.2, puntos: J.dif.puntos * 1.2 });
     J.tema = (J.campana ? GS.Sectores.get(J.campana) : GS.Sectores.lista[0]).tema;
     GS.Poderes.reiniciar();
+    J.rebotes = [];
     const comunes = {
       combo: 0, comboT: 0, kills: 0, disparos: 0, aciertos: 0, esquivados: 0, carga: 0,
       tiempo: opc.duracion || 0, duracion: opc.duracion || 0, tTotal: 0, puntos: 0,
@@ -218,6 +219,7 @@
     J.gatillo = false;
     J.resultado = motivo;
     GS.Poderes.reiniciar();
+    J.rebotes = [];
     GS.Progreso.evento('puntos', J.puntos);
     emitir('fin', motivo);
   };
@@ -283,7 +285,12 @@
   };
 
   // Ganar un poder también se siente
-  GS.Poderes.alActivar(() => { if (J.estado === 'jugando') vibrar('poder'); });
+  GS.Poderes.alActivar((tipo) => {
+    if (J.estado !== 'jugando') return;
+    vibrar('poder');
+    // VIDA: +1 corazón (los dos modos)
+    if (tipo === 'vida' && J.vidas < J.vidasMax) { J.vidas++; emitir('vidas'); }
+  });
 
   /* ---------------- Oleadas ---------------- */
   J.totalOleadas = () => (J.campana ? GS.Sectores.get(J.campana).oleadas.length : 0);
@@ -487,6 +494,7 @@
     J.camaraLenta -= dt;
     const hs = J.pasoSensacion(dt);
     const dtM = dt * (J.camaraLenta > 0 ? 0.3 : 1) * GS.Poderes.escalaTiempo() * hs;
+    const hielo = GS.Poderes.activo('congelar'); // CONGELAR: los aliens y sus disparos se quedan quietos
 
     J.tTotal += dt;
     if (J.modo === 'online' && J.duracion > 0) {
@@ -528,7 +536,7 @@
         J.entreOleadas -= dt;
         if (J.entreOleadas <= 0) nuevaOleada();
       } else {
-        J.tOleada += dtM;
+        J.tOleada += hielo ? 0 : dtM;
         while (J.cola.length && J.cola[0].t <= J.tOleada) aparecer(J.cola.shift());
         if (!J.cola.length && !J.entidades.some((e) => e.enemigo)) {
           if (J.campana && J.oleada >= J.totalOleadas()) {
@@ -539,7 +547,7 @@
             GS.Sonido.oleada();
           }
         }
-        J.tMeteoro -= dtM;
+        J.tMeteoro -= hielo ? 0 : dtM;
         if (J.tMeteoro <= 0) {
           lanzarMeteoro();
           J.tMeteoro = (J.defOleada && J.defOleada.meteoros ? J.defOleada.meteoros : 6) * U.rand(0.85, 1.25) / J.dif.velocidad * (J.esReto('meteoros') ? 0.5 : 1);
@@ -551,7 +559,8 @@
       }
     }
 
-    J.entidades = J.entidades.filter((e) => !e.muerto && actualizarEntidad(e, dtM));
+    J.entidades = J.entidades.filter((e) => !e.muerto && actualizarEntidad(e, !hielo || e.tipo === 'capsula' ? dtM : e.tipo === 'jefe' ? dtM * 0.25 : 0));
+    actualizarRebotes(dt);
     for (const e of J.entidades) e.proy = proyectar(e.pos);
     J.jefe = J.entidades.find((e) => e.tipo === 'jefe') || null;
     J.objetivo = buscarObjetivo();
@@ -893,7 +902,28 @@
 
   const PUNTOS_TIPO = { ovni: 100, divisor: 150, dron: 150, mini: 75, teleport: 200, blindado: 250, jefe: 1500, orbe: 25 };
 
-  function golpear(e, porBomba) {
+  /* REBOTE: el disparo salta al alien más cercano (hasta 2 saltos). */
+  J.rebotes = [];
+  function programarRebote(desde, salto) {
+    let mejor = null, mejorD = 14;
+    for (const o of J.entidades) {
+      if (o === desde || o.muerto || !o.enemigo || !o.proy || o.proy.detras) continue;
+      const d = V.dist(o.pos, desde.pos);
+      if (d < mejorD) { mejor = o; mejorD = d; }
+    }
+    if (mejor) J.rebotes.push({ t: 0.1, a: desde.pos.slice(), obj: mejor, salto, vida: 0.22, linea: 0 });
+  }
+  function actualizarRebotes(dt) {
+    for (const r of J.rebotes) {
+      if (r.t > 0) {
+        r.t -= dt;
+        if (r.t <= 0 && !r.obj.muerto) { r.b = r.obj.pos.slice(); r.linea = r.vida; golpear(r.obj, false, r.salto); }
+      } else r.linea -= dt;
+    }
+    J.rebotes = J.rebotes.filter((r) => r.t > 0 || r.linea > 0);
+  }
+
+  function golpear(e, porBomba, salto) {
     if (e.tipo === 'meteoro') {
       chispas(e.pos, COLORES.meteoro, 8);
       GS.Sonido.rebote();
@@ -911,8 +941,8 @@
       if (!e.avisoBlindado || J.tTotal - e.avisoBlindado > 2) { e.avisoBlindado = J.tTotal; J.textosPantalla.push({ txt: '¡BLINDADO! Espera a que se abra', c: '#e8c39e', t: 0, vida: 0.9 }); }
       return;
     }
-    if (!porBomba) { J.aciertos++; J.marcaGolpe = 0.16; }
-    const danio = e.tipo === 'jefe' && J.objetivoOjo ? 3 : 1;
+    if (!porBomba && !salto) { J.aciertos++; J.marcaGolpe = 0.16; }
+    const danio = e.tipo === 'jefe' && J.objetivoOjo && !salto ? 3 : 1;
     e.hp -= danio;
     e.golpeT = 0.1;
     if (e.hp > 0) {
@@ -940,6 +970,7 @@
       if (J.tutorial) emitir('tutKill');
       // A veces dejan caer un poder
       if (e.tipo !== 'jefe' && !e.tutorial && Math.random() < (J.esReto('poderes') ? 0.2 : 0.09)) soltarCapsula(e.pos);
+      if (!porBomba && GS.Poderes.activo('rebote') && (salto || 0) < 2) programarRebote(e, (salto || 0) + 1);
     }
     const pts = J.sumarPuntos(PUNTOS_TIPO[e.tipo] || 50, e.enemigo);
     textoFlotante(e.pos, '+' + pts, !e.enemigo ? '#ffb3f8' : J.multiplicador() > 1 ? '#ffd23f' : '#ffffff');
@@ -1596,8 +1627,8 @@
       g.fillRect(0, 0, W, H);
     }
     const P = GS.Poderes;
-    if (P.activo('escudo') || P.activo('lento')) {
-      const col = P.activo('escudo') ? '56,248,255' : '199,125,255';
+    if (P.activo('escudo') || P.activo('lento') || P.activo('congelar') || P.activo('fantasma')) {
+      const col = P.activo('escudo') ? '56,248,255' : P.activo('congelar') ? '155,231,255' : P.activo('fantasma') ? '224,212,255' : '199,125,255';
       const a = 0.25 + 0.12 * Math.sin(performance.now() / 220);
       const gr = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.72);
       gr.addColorStop(0, 'rgba(' + col + ',0)');
@@ -1656,6 +1687,18 @@
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
+    for (const r of J.rebotes) {
+      if (!r.b || r.linea <= 0) continue;
+      const pa = proyectar(r.a), pb = proyectar(r.b);
+      if (pa.detras || pb.detras) continue;
+      const a = r.linea / r.vida;
+      ctx.strokeStyle = 'rgba(93,255,176,' + (0.5 * a).toFixed(2) + ')';
+      ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+      ctx.strokeStyle = 'rgba(230,255,240,' + (0.9 * a).toFixed(2) + ')';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+    }
     for (const l of J.laseres) {
       const a = l.t / 0.09;
       const x0 = l.lado ? W * 0.86 : W * 0.14, y0 = H + 10;

@@ -39,6 +39,8 @@
     clic('modoEsquiva', () => elegirTipo('esquiva'));
     clic('ctrlNormal', () => K.elegirControl('normal'));
     clic('ctrlCamara', () => K.elegirControl('camara'));
+    clic('movLibre', () => K.elegirMovimiento('libre'));
+    clic('movCarriles', () => K.elegirMovimiento('carriles'));
     clic('btnCamListo', () => {
       const CU = GS.Cuerpo;
       if (CU.estado === 'listo') { K.cerrarCamara(true); return; }
@@ -167,6 +169,7 @@
     $('modoAR').classList.toggle('activo', st.tipoElegido === 'ar');
     $('modoEsquiva').classList.toggle('activo', st.tipoElegido === 'esquiva');
     $('selectorControl').classList.toggle('oculto', st.tipoElegido !== 'esquiva');
+    $('selectorMovimiento').classList.toggle('oculto', st.tipoElegido !== 'esquiva');
     // La cámara frontal se apaga si cambias a Disparos AR
     if (st.tipoElegido !== 'esquiva' && GS.Cuerpo.estado === 'listo') GS.Cuerpo.detener();
     K.pintarControl();

@@ -14,7 +14,12 @@
     doble:  { corto: 'x2', nombre: 'Puntos x2', dur: 10, css: '#ffd23f', rgb: [1, 0.85, 0.25], modos: ['ar', 'esquiva'], desc: 'Puntos dobles' },
     rafaga: { corto: 'RÁFAGA', nombre: 'Ráfaga', dur: 8, css: '#ff8a3d', rgb: [1, 0.5, 0.15], modos: ['ar'], desc: 'Disparas mucho más rápido' },
     bomba:  { corto: 'BOMBA', nombre: 'Bomba', dur: 0, css: '#ff3355', rgb: [1, 0.2, 0.3], modos: ['ar'], desc: 'Destruye a los aliens que ves' },
-    iman:   { corto: 'IMÁN', nombre: 'Imán', dur: 10, css: '#7CFF4F', rgb: [0.45, 1, 0.35], modos: ['esquiva'], desc: 'Atrae los cristales' }
+    iman:   { corto: 'IMÁN', nombre: 'Imán', dur: 10, css: '#7CFF4F', rgb: [0.45, 1, 0.35], modos: ['esquiva'], desc: 'Atrae los cristales' },
+    // Nuevos (v3.1)
+    vida:     { corto: 'VIDA', nombre: 'Vida extra', dur: 0, css: '#ff4d6d', rgb: [1, 0.3, 0.42], modos: ['ar', 'esquiva'], desc: 'Recuperas un corazón' },
+    congelar: { corto: 'HIELO', nombre: 'Congelar', dur: 4, css: '#9be7ff', rgb: [0.6, 0.9, 1], modos: ['ar'], desc: 'Los aliens se quedan quietos' },
+    rebote:   { corto: 'REBOTE', nombre: 'Rebote', dur: 10, css: '#5dffb0', rgb: [0.36, 1, 0.69], modos: ['ar'], desc: 'Tu disparo salta al alien más cercano' },
+    fantasma: { corto: 'FANTASMA', nombre: 'Fantasma', dur: 5, css: '#e0d4ff', rgb: [0.88, 0.83, 1], modos: ['esquiva'], desc: 'Atraviesas todo sin daño' }
   };
 
   const activos = {}; // tipo → segundos que quedan
@@ -28,8 +33,13 @@
 
   /** Un poder al azar que sirva en este modo de juego. */
   P.azar = function (tipoJuego) {
-    const lista = Object.keys(P.TIPOS).filter((k) => P.TIPOS[k].modos.includes(tipoJuego));
-    return lista[(Math.random() * lista.length) | 0];
+    const J = GS.Juego;
+    const faltaVida = J && J.vidas < J.vidasMax;
+    // VIDA solo sale si te falta un corazón, y sale menos que los demás
+    const lista = Object.keys(P.TIPOS).filter((k) => P.TIPOS[k].modos.includes(tipoJuego) && (k !== 'vida' || faltaVida));
+    let tipo = lista[(Math.random() * lista.length) | 0];
+    if (tipo === 'vida' && Math.random() < 0.5) tipo = lista[(Math.random() * lista.length) | 0];
+    return tipo;
   };
 
   P.activar = function (tipo) {
